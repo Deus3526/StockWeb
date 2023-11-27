@@ -1,5 +1,10 @@
 
 using Microsoft.Extensions.Options;
+using Serilog;
+using Serilog.Filters;
+using Serilog.Formatting.Compact;
+using StockWeb.Enums;
+using StockWeb.StartUpConfigure;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -10,9 +15,8 @@ namespace StockWeb
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-
             // Add services to the container.
-
+            builder.SerilogConfigure();
             builder.Services.AddControllers().AddJsonOptions(options => 
             {
                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));

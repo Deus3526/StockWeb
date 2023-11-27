@@ -1,6 +1,6 @@
 ﻿namespace StockWeb.Enums
 {
-    public enum StockType
+    public enum StockTypeEnum
     {
         UnKnown,
         tse,

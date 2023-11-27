@@ -10,7 +10,7 @@ namespace StockWeb.DbModels
             modelBuilder.Entity<StockBaseInfo>(entity =>
             {
                 entity.Property(e => e.StockType)
-                    .HasConversion(e=>e.ToString(),e=>Enum.Parse<StockType>(e))
+                    .HasConversion(e=>e.ToString(),e=>Enum.Parse<StockTypeEnum>(e))
                     .HasMaxLength(3)
                     .IsUnicode(false);
             });

@@ -4,6 +4,6 @@ namespace StockWeb.DbModels
 {
     public partial class StockBaseInfo
     {
-        public StockType StockType { get; set; } =StockType.UnKnown;
+        public StockTypeEnum StockType { get; set; } =StockTypeEnum.UnKnown;
     }
 }
