@@ -17,9 +17,11 @@ public partial class StockContext : DbContext
 
     public virtual DbSet<StockBaseInfo> StockBaseInfos { get; set; }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Data Source=.,1434;User ID=sa;Password=deus.ko3526;Initial Catalog=Stock;TrustServerCertificate=true");
+    public virtual DbSet<User> Users { get; set; }
+
+//    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+//#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
+//        => optionsBuilder.UseSqlServer("Data Source=.,1434;User ID=sa;Password=deus.ko3526;Initial Catalog=Stock;TrustServerCertificate=true");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -36,6 +38,20 @@ public partial class StockContext : DbContext
             entity.Property(e => e.StockType)
                 .HasMaxLength(3)
                 .IsUnicode(false);
+        });
+
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.ToTable("User");
+
+            entity.Property(e => e.UserId).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.Account)
+                .HasMaxLength(25)
+                .IsUnicode(false);
+            entity.Property(e => e.Password)
+                .HasMaxLength(60)
+                .IsUnicode(false);
+            entity.Property(e => e.UserName).HasMaxLength(15);
         });
 
         OnModelCreatingPartial(modelBuilder);

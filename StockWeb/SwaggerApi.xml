@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>StockWeb</name>
+    </assembly>
+    <members>
+        <member name="M:StockWeb.Controllers.AccountController.Login(StockWeb.Models.RequestParms.LoginParm)">
+            <summary>
+            登入取token
+            </summary>
+            <param name="parm"></param>
+            <returns></returns>
+        </member>
+        <member name="P:StockWeb.Models.RequestParms.LoginParm.account">
+            <summary>
+            
+            </summary>
+            <example>deus.ko3526</example>
+        </member>
+        <member name="P:StockWeb.Models.RequestParms.LoginParm.password">
+            <summary>
+            
+            </summary>
+            <example>deus.ko3526</example>
+        </member>
+        <member name="M:StockWeb.StartUpConfigure.JwtConfigurator.JwtConfigure(Microsoft.AspNetCore.Builder.WebApplicationBuilder)">
+            <summary>
+            配置jwt
+            </summary>
+            <param name="builder"></param>
+        </member>
+        <member name="M:StockWeb.StartUpConfigure.SerilogConfigurator.SerilogConfigure(Microsoft.AspNetCore.Builder.WebApplicationBuilder)">
+            <summary>
+            配置SeriLog的設定並使用
+            </summary>
+            <param name="builder"></param>
+        </member>
+    </members>
+</doc>
