@@ -13,6 +13,7 @@ using StockWeb.DbModels;
 using StockWeb.Enums;
 using StockWeb.Services;
 using StockWeb.StartUpConfigure;
+using StockWeb.StartUpConfigure.Middleware;
 using StockWeb.StaticData;
 using System.Text;
 using System.Text.Json;
@@ -80,9 +81,9 @@ namespace StockWeb
                     }
                 });
             });
-
+            builder.Services.AddSingleton<RequestLogMiddleware>();
             var app = builder.Build();
-
+            app.UseMiddleware<RequestLogMiddleware>();
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StockWeb.DbModels;
+using StockWeb.Enums;
 using StockWeb.Models.RequestParms;
 using StockWeb.Services;
 using StockWeb.StaticData;
@@ -20,10 +21,12 @@ namespace StockWeb.Controllers
     {
         private readonly JwtService _jwtService;
         private readonly StockContext _db;
-        public AccountController(JwtService jwtService,StockContext db) 
+        private ILogger<AccountController> _logger;
+        public AccountController(ILogger<AccountController> logger,JwtService jwtService,StockContext db) 
         {
             _jwtService = jwtService;
             _db = db;
+            _logger = logger;
         }
 
         [HttpPost]
@@ -41,6 +44,15 @@ namespace StockWeb.Controllers
             return q;
         }
 
+        [AllowAnonymous]
+        [HttpGet]
+        public ActionResult ExceptionLogTest()
+        {
+            int? a = null;
+            ArgumentNullException.ThrowIfNull(a);
+            return Ok();
+        }
+
         /// <summary>
         /// 登入取token
         /// </summary>
@@ -54,11 +66,11 @@ namespace StockWeb.Controllers
             if(q==null) return Unauthorized();
             if(BCrypt.Net.BCrypt.Verify(parm.password,q.Password)==false) return Unauthorized();
 
-
             string userId=q.UserId.ToString();
             string token = _jwtService.GenerateToken(userId);
             RefreshToken refreshToken = _jwtService.GenerateRefreshToken(userId);
             _jwtService.AddRefreshToken(refreshToken);
+            _logger.LogInformation($"Login {{@{nameof(LogTypeEnum)}}}  {{@User}}  {{@LocalTime}}",LogTypeEnum.Login,q,DateTimeOffset.Now);
             return Ok(new
             {
                 accessToken =token,
@@ -67,6 +79,11 @@ namespace StockWeb.Controllers
 
         }
 
+        /// <summary>
+        /// 註冊帳號
+        /// </summary>
+        /// <param name="parm"></param>
+        /// <returns></returns>
         [AllowAnonymous]
         [HttpPost]
         public async Task<ActionResult> RegisterAccount(RegisterAccountParm parm)
@@ -84,6 +101,7 @@ namespace StockWeb.Controllers
             };
             _db.Users.Add(user);
             await _db.SaveChangesAsync();
+            _logger.LogInformation($"Register {{@{nameof(LogTypeEnum)}}}  {{@User}}  {{@LocalTime}}", LogTypeEnum.Login, user, DateTimeOffset.Now);
             return Ok();
         }
     }

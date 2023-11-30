@@ -11,6 +11,13 @@
             <param name="parm"></param>
             <returns></returns>
         </member>
+        <member name="M:StockWeb.Controllers.AccountController.RegisterAccount(StockWeb.Models.RequestParms.RegisterAccountParm)">
+            <summary>
+            註冊帳號
+            </summary>
+            <param name="parm"></param>
+            <returns></returns>
+        </member>
         <member name="P:StockWeb.Models.RequestParms.LoginParm.account">
             <summary>
             
