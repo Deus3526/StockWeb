@@ -34,6 +34,7 @@ public partial class StockContext : DbContext
             entity.Property(e => e.StockId)
                 .ValueGeneratedNever()
                 .HasColumnName("StockID");
+            entity.Property(e => e.Category).HasMaxLength(20);
             entity.Property(e => e.StockName).HasMaxLength(15);
             entity.Property(e => e.StockType)
                 .HasMaxLength(3)

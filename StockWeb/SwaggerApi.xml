@@ -18,6 +18,12 @@
             <param name="parm"></param>
             <returns></returns>
         </member>
+        <member name="M:StockWeb.Controllers.StockController.UpdateStockBaseInfo">
+            <summary>
+            更新上市櫃股票基本資訊
+            </summary>
+            <returns></returns>
+        </member>
         <member name="P:StockWeb.Models.RequestParms.LoginParm.account">
             <summary>
             
@@ -30,17 +36,63 @@
             </summary>
             <example>deus.ko3526</example>
         </member>
+        <member name="P:StockWeb.Services.ServicesForControllers.StockService.dateString">
+            <summary>
+            返回 20230526的格式
+            </summary>
+        </member>
+        <member name="P:StockWeb.Services.ServicesForControllers.StockService.dateTaiwan">
+            <summary>
+            返回111/05/26的格式
+            </summary>
+        </member>
         <member name="M:StockWeb.StartUpConfigure.JwtConfigurator.JwtConfigure(Microsoft.AspNetCore.Builder.WebApplicationBuilder)">
             <summary>
             配置jwt
             </summary>
             <param name="builder"></param>
         </member>
+        <member name="M:StockWeb.StartUpConfigure.Middleware.CustomExceptionHandlerExtension.UseCustomExceptionHandler(Microsoft.AspNetCore.Builder.IApplicationBuilder)">
+            <summary>
+            對於StaticData儲存的可能會發生的錯誤訊息，使用Middleware統一處理
+            </summary>
+            <param name="app"></param>
+        </member>
+        <member name="T:StockWeb.StartUpConfigure.Middleware.CustomErrorResponseException">
+            <summary>
+            這個自訂的Exception，用於給自訂的Middleware:CustomExceptionHandler捕捉，會按照訊息及狀態回傳Response
+            </summary>
+        </member>
+        <member name="M:StockWeb.StartUpConfigure.Middleware.CustomErrorResponseException.#ctor(System.String,System.Int32)">
+            <summary>
+            這個自訂的Exception，用於給自訂的Middleware:CustomExceptionHandler捕捉，會按照訊息及狀態回傳Response
+            </summary>
+            <param name="message"></param>
+            <param name="statusCode"></param>
+        </member>
+        <member name="M:StockWeb.StartUpConfigure.Middleware.RequestLogMiddlewareExtension.UseRequestLogMiddleware(Microsoft.AspNetCore.Builder.IApplicationBuilder)">
+            <summary>
+            使用Middlware統一紀錄Request的log
+            </summary>
+            <param name="app"></param>
+        </member>
         <member name="M:StockWeb.StartUpConfigure.SerilogConfigurator.SerilogConfigure(Microsoft.AspNetCore.Builder.WebApplicationBuilder)">
             <summary>
             配置SeriLog的設定並使用
             </summary>
             <param name="builder"></param>
+        </member>
+        <member name="M:StockWeb.StartUpConfigure.SwaggerConfigurator.SwaggerConfigure(Microsoft.AspNetCore.Builder.WebApplicationBuilder)">
+            <summary>
+            註冊及設定Swagger文件
+            </summary>
+            <param name="builder"></param>
+        </member>
+        <member name="M:StockWeb.StartUpConfigure.SwaggerConfigurator.UserMySwagger(Microsoft.AspNetCore.Builder.WebApplication)">
+            <summary>
+            設定Swagger Middleware及UI
+            </summary>
+            <param name="app"></param>
         </member>
     </members>
 </doc>

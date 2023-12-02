@@ -32,7 +32,7 @@ namespace StockWeb.StartUpConfigure.Middleware
                 {
                     ExceptionDispatchInfo.Capture(ex).Throw(); //// 重新拋出原始異常並保留堆棧跟踪，給框架處理錯誤回傳內容，就仍然可在Swagger上直接看到詳細錯誤內容
                 }
-                return; // 如果不重新拋出異常，則提前終止處理，不跑後續的其他Middleware
+                return; 
             }
             finally
             {
@@ -62,6 +62,19 @@ namespace StockWeb.StartUpConfigure.Middleware
             };
 
             _logger.LogInformation($"HTTP Request-Response:{{@RequestInfo}}-{{@ResponseInfo}}-{{@{nameof(LogTypeEnum)}}}", requestInfo,responseInfo,LogTypeEnum.Request);
+        }
+    }
+
+
+    public static class RequestLogMiddlewareExtension
+    {
+        /// <summary>
+        /// 使用Middlware統一紀錄Request的log
+        /// </summary>
+        /// <param name="app"></param>
+        public static void UseRequestLogMiddleware(this IApplicationBuilder app)
+        {
+            app.UseMiddleware<RequestLogMiddleware>();
         }
     }
 }

@@ -1,0 +1,4 @@
+{
+  "上市股票基本訊息_計算流通張數": "https://openapi.twse.com.tw/v1/opendata/t187ap03_L",
+  "上櫃股票基本訊息_發行股數": "https://www.tpex.org.tw/web/stock/aftertrading/daily_mktval/mkt_result.php"
+}

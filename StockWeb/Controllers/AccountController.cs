@@ -8,15 +8,16 @@ using StockWeb.DbModels;
 using StockWeb.Enums;
 using StockWeb.Models.RequestParms;
 using StockWeb.Services;
-using StockWeb.StaticData;
+using StockWeb.StartUpConfigure;
+using StockWeb.StartUpConfigure.Middleware;
 
 namespace StockWeb.Controllers
 {
    
     [Route("api/[controller]/[action]")]
     [ApiController]
-    [ApiExplorerSettings(GroupName = nameof(ApiGroups.Account))]
-    [Tags("登入相關的端點")]
+    [ApiExplorerSettings(GroupName = nameof(ApiGroups.Stock))]
+    [Tags(Tags.登入相關)]
     public class AccountController : ControllerBase
     {
         private readonly JwtService _jwtService;
@@ -29,29 +30,7 @@ namespace StockWeb.Controllers
             _logger = logger;
         }
 
-        [HttpPost]
-        public ActionResult<StockBaseInfo> testNeedLogin()
-        {
-            var q=_db.StockBaseInfos.First();
-            return q;
-        }
 
-        [AllowAnonymous]
-        [HttpPost]
-        public ActionResult<StockBaseInfo> testNoNeedLogin()
-        {
-            var q = _db.StockBaseInfos.First();
-            return q;
-        }
-
-        [AllowAnonymous]
-        [HttpGet]
-        public ActionResult ExceptionLogTest()
-        {
-            int? a = null;
-            ArgumentNullException.ThrowIfNull(a);
-            return Ok();
-        }
 
         /// <summary>
         /// 登入取token
