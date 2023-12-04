@@ -48,7 +48,7 @@ namespace StockWeb.Models.ApiResponseModel
         public object[]? note { get; set; }
         public string[][]? aaData { get; set; }
 
-        public void 讀入上櫃股票基本資訊_流通股數(ConcurrentBag<StockBaseInfo> bags)
+        public void 轉換為上櫃股票基本資訊_流通股數(ConcurrentBag<StockBaseInfo> bags)
         {
             ArgumentNullException.ThrowIfNull(aaData);
             foreach (string[] s in aaData)

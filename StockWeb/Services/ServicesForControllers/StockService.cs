@@ -21,28 +21,27 @@ namespace StockWeb.Services.ServicesForControllers
             _httpClientFactory = httpClientFactory;
         }
 
+
+        #region 更新股票基本資訊表
         public async Task UpdateStockBaseInfo()
         {
-            List<StockBaseInfo> stockBaseInfos=_db.StockBaseInfos.ToList();
+            List<StockBaseInfo> stockBaseInfos = _db.StockBaseInfos.ToList();
             ConcurrentBag<StockBaseInfo> bags = new ConcurrentBag<StockBaseInfo>();
             List<Task> tasks = new List<Task>();
             tasks.Add(取得上市股票基本訊息_計算流通張數(bags));
             tasks.Add(取得上櫃股票基本訊息_發行股數(bags));
 
             await Task.WhenAll(tasks);
-            foreach(var bag in bags)
+            foreach (var bag in bags)
             {
                 StockBaseInfo? baseInfo = stockBaseInfos.FirstOrDefault(s => s.StockId == bag.StockId);
-                if(baseInfo==null)
+                if (baseInfo == null)
                 {
                     _db.StockBaseInfos.Add(bag);
                 }
                 else
                 {
-                    baseInfo.StockName = bag.StockName;
-                    baseInfo.Category = bag.Category;
-                    baseInfo.StockAmount = bag.StockAmount;
-                    baseInfo.StockType = bag.StockType;
+                    baseInfo.UpdateStockBaseInfo(bag);
                 }
             }
             await _db.SaveChangesAsync();
@@ -56,14 +55,14 @@ namespace StockWeb.Services.ServicesForControllers
             List<上市股票基本資訊>? res = null;
             try
             {
-                res=await client.GetFromJsonAsync<List<上市股票基本資訊>>(url);
+                res = await client.GetFromJsonAsync<List<上市股票基本資訊>>(url);
             }
             catch
             {
                 throw new CustomErrorResponseException("取得上市股票基本訊息時發生錯誤", StatusCodes.Status502BadGateway);
             }
             ArgumentNullException.ThrowIfNull(res);
-            foreach(上市股票基本資訊 s in res)
+            foreach (上市股票基本資訊 s in res)
             {
                 ArgumentNullException.ThrowIfNull(s.公司代號);
                 int stockId = s.公司代號.Value;
@@ -92,7 +91,7 @@ namespace StockWeb.Services.ServicesForControllers
             {
                 var res = await client.GetFromJsonAsync<上櫃股票基本資訊_發行股數回傳結果>(url);
                 ArgumentNullException.ThrowIfNull(res);
-                res.讀入上櫃股票基本資訊_流通股數(bags);
+                res.轉換為上櫃股票基本資訊_流通股數(bags);
                 res = null;
 
                 return;
@@ -102,6 +101,8 @@ namespace StockWeb.Services.ServicesForControllers
                 throw new CustomErrorResponseException("取得上市股票基本訊息時發生錯誤", StatusCodes.Status502BadGateway);
             }
         }
+        #endregion
+
 
         /// <summary>
         /// 返回 20230526的格式

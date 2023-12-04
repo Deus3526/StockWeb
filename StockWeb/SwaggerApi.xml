@@ -20,9 +20,16 @@
         </member>
         <member name="M:StockWeb.Controllers.StockController.UpdateStockBaseInfo">
             <summary>
-            更新上市櫃股票基本資訊
+            更新DB上市櫃股票基本資訊
             </summary>
             <returns></returns>
+        </member>
+        <member name="M:StockWeb.DbModels.StockBaseInfo.UpdateStockBaseInfo(StockWeb.DbModels.StockBaseInfo)">
+            <summary>
+            輸入一個新的StockBaseInfo來更新來自DB的StockBaseInfo的資訊，ID要一樣
+            </summary>
+            <param name="stockBaseInfo"></param>
+            <exception cref="T:System.Exception"></exception>
         </member>
         <member name="P:StockWeb.Models.RequestParms.LoginParm.account">
             <summary>

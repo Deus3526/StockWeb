@@ -14,4 +14,6 @@ public partial class StockBaseInfo
     public int StockAmount { get; set; }
 
     public string? Category { get; set; }
+
+    public virtual ICollection<StockDayInfo> StockDayInfos { get; set; } = new List<StockDayInfo>();
 }

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using StockWeb.DbModels;
 using StockWeb.StartUpConfigure;
 using StockWeb.StartUpConfigure.Middleware;

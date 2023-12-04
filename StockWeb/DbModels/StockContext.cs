@@ -17,6 +17,8 @@ public partial class StockContext : DbContext
 
     public virtual DbSet<StockBaseInfo> StockBaseInfos { get; set; }
 
+    public virtual DbSet<StockDayInfo> StockDayInfos { get; set; }
+
     public virtual DbSet<User> Users { get; set; }
 
 //    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -39,6 +41,25 @@ public partial class StockContext : DbContext
             entity.Property(e => e.StockType)
                 .HasMaxLength(3)
                 .IsUnicode(false);
+        });
+
+        modelBuilder.Entity<StockDayInfo>(entity =>
+        {
+            entity.HasKey(e => new { e.StockId, e.Date });
+
+            entity.ToTable("StockDayInfo");
+
+            entity.Property(e => e.Ma10).HasColumnName("ma10");
+            entity.Property(e => e.Ma120).HasColumnName("ma120");
+            entity.Property(e => e.Ma20).HasColumnName("ma20");
+            entity.Property(e => e.Ma240).HasColumnName("ma240");
+            entity.Property(e => e.Ma5).HasColumnName("ma5");
+            entity.Property(e => e.Ma60).HasColumnName("ma60");
+
+            entity.HasOne(d => d.Stock).WithMany(p => p.StockDayInfos)
+                .HasForeignKey(d => d.StockId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockDayInfo_StockBaseInfo");
         });
 
         modelBuilder.Entity<User>(entity =>
