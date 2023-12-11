@@ -23,11 +23,9 @@ namespace StockWeb.StartUpConfigure.Middleware
                     CustomErrorResponseException customException = (CustomErrorResponseException)exception;
                     context.Response.ContentType = "application/json";
                     context.Response.StatusCode = customException.StatusCode;
-                    if (customException.StatusCode != StatusCodes.Status204NoContent)
-                    {
-                        var result = System.Text.Json.JsonSerializer.Serialize(new { error = customException.Message });
-                        await context.Response.WriteAsync(result);
-                    }
+                    var result = System.Text.Json.JsonSerializer.Serialize(new { error = customException.Message });
+                    await context.Response.WriteAsync(result);
+
                     // 繼續執行後續中間件，例如將response寫入log的中間件，但是切記這邊已經寫入回傳訊息了，後續的中間件不能再改動response
                     break;
                 default:
@@ -39,7 +37,7 @@ namespace StockWeb.StartUpConfigure.Middleware
     public static class CustomExceptionHandlerExtension
     {
         /// <summary>
-        /// 對於StaticData儲存的可能會發生的錯誤訊息，使用Middleware統一處理
+        /// 對於自己拋出的CustomErrorResponseException，使用Middleware統一處理
         /// </summary>
         /// <param name="app"></param>
         public static void UseCustomExceptionHandler(this IApplicationBuilder app)
@@ -78,6 +76,4 @@ namespace StockWeb.StartUpConfigure.Middleware
             StatusCode = statusCode;
         }
     }
-
-
 }

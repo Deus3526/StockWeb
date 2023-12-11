@@ -24,12 +24,47 @@
             </summary>
             <returns></returns>
         </member>
+        <member name="M:StockWeb.Controllers.StockController.UpdateStockDayInfo(StockWeb.Models.RequestParms.UpdateStockDayInfoParm)">
+            <summary>
+            往前或往後更新股票日成交資訊
+            </summary>
+            <param name="parm"></param>
+            <returns></returns>
+        </member>
         <member name="M:StockWeb.DbModels.StockBaseInfo.UpdateStockBaseInfo(StockWeb.DbModels.StockBaseInfo)">
             <summary>
             輸入一個新的StockBaseInfo來更新來自DB的StockBaseInfo的資訊，ID要一樣
             </summary>
             <param name="stockBaseInfo"></param>
             <exception cref="T:System.Exception"></exception>
+        </member>
+        <member name="M:StockWeb.Extensions.DateTimeExtension.ToDateFormateString1(System.DateTime)">
+            <summary>
+            返回 20230526的格式
+            </summary>
+            <param name="dateTime"></param>
+            <returns></returns>
+        </member>
+        <member name="M:StockWeb.Extensions.DateTimeExtension.ToDateFormateString2(System.DateTime)">
+            <summary>
+            返回111/05/26的格式
+            </summary>
+            <param name="dateTime"></param>
+            <returns></returns>
+        </member>
+        <member name="M:StockWeb.Extensions.DateTimeExtension.ToDateFormateForTse(System.DateOnly)">
+            <summary>
+            返回 20230526的格式
+            </summary>
+            <param name="date"></param>
+            <returns></returns>
+        </member>
+        <member name="M:StockWeb.Extensions.DateTimeExtension.ToDateFormateString2(System.DateOnly)">
+            <summary>
+            返回111/05/26的格式
+            </summary>
+            <param name="date"></param>
+            <returns></returns>
         </member>
         <member name="P:StockWeb.Models.RequestParms.LoginParm.account">
             <summary>
@@ -43,14 +78,53 @@
             </summary>
             <example>deus.ko3526</example>
         </member>
-        <member name="P:StockWeb.Services.ServicesForControllers.StockService.dateString">
+        <member name="P:StockWeb.Models.RequestParms.UpdateStockDayInfoParm.IsHistoricalUpdate">
             <summary>
-            返回 20230526的格式
+            true:更新舊資料、false:更新新資料
+            </summary>
+            <example>false</example>
+        </member>
+        <member name="M:StockWeb.Services.ServicesForControllers.StockService.UpdateStockBaseInfo">
+            <summary>
+            更新股票基本資訊表
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:StockWeb.Services.ServicesForControllers.StockService.UpdateStockDayInfo(System.Boolean)">
+            <summary>
+            依據參數isHistoricalUpdate往前或往後更新日成交資訊，如果Db沒有資料，插入2021/1/1的資料
+            </summary>
+            <param name="isHistoricalUpdate"></param>
+            <returns></returns>
+        </member>
+        <member name="M:StockWeb.Services.ServicesForControllers.StockService.UpdateStockDayInfoByDate(System.DateOnly)">
+            <summary>
+            更新指定日期的日成交資訊
+            </summary>
+            <param name="date"></param>
+            <returns></returns>
+        </member>
+        <member name="M:StockWeb.Services.ServicesForControllers.StockService.DeleteDayInfoRange(System.Nullable{System.DateOnly},System.Nullable{System.DateOnly})">
+            <summary>
+            刪除指定期間內的日成交資料
+            </summary>
+            <param name="startDate"></param>
+            <param name="endDate"></param>
+            <returns></returns>
+        </member>
+        <member name="P:StockWeb.StartUpConfigure.LoggingInterceptorAttribute.MethodName">
+            <summary>
+            執行方法的名字
             </summary>
         </member>
-        <member name="P:StockWeb.Services.ServicesForControllers.StockService.dateTaiwan">
+        <member name="P:StockWeb.StartUpConfigure.LoggingInterceptorAttribute.ErrorMessage">
             <summary>
-            返回111/05/26的格式
+            發生錯誤時的錯誤訊息
+            </summary>
+        </member>
+        <member name="P:StockWeb.StartUpConfigure.LoggingInterceptorAttribute.StatusCode">
+            <summary>
+            發生錯誤時，在正式環境丟CustomErrorResponseException時，要回傳的狀態碼
             </summary>
         </member>
         <member name="M:StockWeb.StartUpConfigure.JwtConfigurator.JwtConfigure(Microsoft.AspNetCore.Builder.WebApplicationBuilder)">
@@ -61,7 +135,7 @@
         </member>
         <member name="M:StockWeb.StartUpConfigure.Middleware.CustomExceptionHandlerExtension.UseCustomExceptionHandler(Microsoft.AspNetCore.Builder.IApplicationBuilder)">
             <summary>
-            對於StaticData儲存的可能會發生的錯誤訊息，使用Middleware統一處理
+            對於自己拋出的CustomErrorResponseException，使用Middleware統一處理
             </summary>
             <param name="app"></param>
         </member>

@@ -48,50 +48,27 @@ namespace StockWeb
 
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
-           builder.SwaggerConfigure();
+            builder.SwaggerConfigure();
+            builder.AspectCoreConfigure();
             builder.Services.AddSingleton<RequestLogMiddleware>();
             builder.Services.AddSingleton<CustomExceptionHandler>();
             builder.Services.AddScoped<StockService>();
             builder.Services.AddHttpClient();
-            builder.Services.AddMemoryCache(options =>
-            {
-                // SizeLimit: 快取的大小限制，單位為字節。如果沒有設定，則快取的大小不受限制。
-                options.SizeLimit = 1024 * 1024 * 100; // 例如，設定為 100 MB
-
-                // CompactionPercentage: 當發生內存壓力時，快取將釋放的內存百分比。預設值通常為 0.2（即 20%）。
-                options.CompactionPercentage = 0.2; // 可以設定為其他值
-
-                // ExpirationScanFrequency: 快取清理過期項目的頻率。預設值通常為 1 分鐘。
-                options.ExpirationScanFrequency = TimeSpan.FromMinutes(1); // 可以設定為其他時間間隔
-
-                // TrackLinkedCacheEntries: 是否追蹤連結的快取項目以支援依賴性。例如移除掉A，依賴於A的B也會跟著移除。這個選項在預設情況下通常是 false。
-                options.TrackLinkedCacheEntries = false; // 可以設定為 true，但會有額外的性能成本
-            });
             //builder.Services.AddDistributedMemoryCache();  //如果之後要用Redis這種分布式緩存，可以先用這個頂著，即便預設也是在本地中儲存數據，但跟Redis是一樣的介面
-            builder.Services.AddOutputCache(options =>
-            {
-                options.AddPolicy(nameof(OutputCacheWithAuthPolicy), policy => 
-                {
-                    policy.AddPolicy<OutputCacheWithAuthPolicy>()
-                        .Expire(TimeSpan.FromMinutes(10)) // 设置为 10 分钟 ，不知道這個能不能寫進OutputCacheWithAuthPolicy裡面設定
-                        .SetVaryByHeader(["Authorization"]); //不同的Header Authorization，要個別存快取，不知道這個能不能寫進OutputCacheWithAuthPolicy裡面設定
-                });
-            });
             var app = builder.Build();
             app.UseRequestLogMiddleware();
             app.UseCustomExceptionHandler();
             // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
-            {
-                app.UserMySwagger();
-            }
-
+            //if (app.Environment.IsDevelopment())
+            //{
+            //    app.UserMySwagger();
+            //}
+            app.UserMySwagger();
             app.UseHttpsRedirection();
 
             
             app.UseAuthentication();
             app.UseAuthorization();
-            app.UseOutputCache();
 
             app.MapControllers();
 

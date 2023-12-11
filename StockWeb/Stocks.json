@@ -1,4 +1,9 @@
 {
   "上市股票基本訊息_計算流通張數": "https://openapi.twse.com.tw/v1/opendata/t187ap03_L",
-  "上櫃股票基本訊息_發行股數": "https://www.tpex.org.tw/web/stock/aftertrading/daily_mktval/mkt_result.php"
+  "上櫃股票基本訊息_發行股數": "https://www.tpex.org.tw/web/stock/aftertrading/daily_mktval/mkt_result.php",
+
+  "上市股票盤後基本資訊": "https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?type=ALLBUT0999&date=",
+  "上市股票盤後當沖資訊": "https://www.twse.com.tw/zh/exchangeReport/TWTB4U?date=",
+  "上市股票盤後融資融券資訊": "https://www.twse.com.tw/zh/exchangeReport/MI_MARGN?selectType=ALL&date=",
+  "上市股票盤後借券資訊": "https://www.twse.com.tw/zh/exchangeReport/TWT93U?date="
 }

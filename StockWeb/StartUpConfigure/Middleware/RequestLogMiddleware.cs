@@ -27,10 +27,13 @@ namespace StockWeb.StartUpConfigure.Middleware
             catch(Exception ex)
             {
                 _logger.LogError($"Error:{{@ExceptionInfo}}-{{@{nameof(LogTypeEnum)}}}", ex, LogTypeEnum.Error);
-                context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-                if (_env.IsDevelopment() || _env.IsStaging())
+                if (_env.IsDevelopment())
                 {
                     ExceptionDispatchInfo.Capture(ex).Throw(); //// 重新拋出原始異常並保留堆棧跟踪，給框架處理錯誤回傳內容，就仍然可在Swagger上直接看到詳細錯誤內容
+                }
+                else
+                {
+                    context.Response.StatusCode = StatusCodes.Status500InternalServerError; //只顯示500錯誤碼
                 }
                 return; 
             }

@@ -74,4 +74,87 @@ namespace StockWeb.Models.ApiResponseModel
     }
 
 
+
+    public class 上市股票盤後基本資訊回傳結果
+    {
+        public required Table[] tables { get; set; }
+        public Params? _params { get; set; }
+        public string? stat { get; set; }
+        public string? date { get; set; }
+
+        public class Params
+        {
+            public string? date { get; set; }
+            public string? type { get; set; }
+            public string? controller { get; set; }
+            public string? action { get; set; }
+            public string? lang { get; set; }
+        }
+
+        public class Table
+        {
+            public string? title { get; set; }
+            public string[]? fields { get; set; }
+            public string[][]? data { get; set; }
+        }
+    }
+
+
+    public class 上市股票盤後當沖資訊回傳結果
+    {
+        public string? stat { get; set; }
+        public string? date { get; set; }
+        public required Table[] tables { get; set; }
+        public string? selectType { get; set; }
+        public class Table
+        {
+            public string? title { get; set; }
+            public string[]? fields { get; set; }
+            public required string[][] data { get; set; }
+            public string[]? notes { get; set; }
+            public string? hints { get; set; }
+            public int? total { get; set; }
+        }
+    }
+
+
+    public class 上市股票盤後融資融券資訊回傳結果
+    {
+        public string? stat { get; set; }
+        public string? date { get; set; }
+        public required Table[] tables { get; set; }
+        public class Table
+        {
+            public string? title { get; set; }
+            public string[]? fields { get; set; }
+            public required string[][] data { get; set; }
+            public string[]? notes { get; set; }
+        }
+    }
+
+    public class 上市股票盤後借券資訊回傳結果
+    {
+        public string? stat { get; set; }
+        public string? date { get; set; }
+        public string? title { get; set; }
+        public string? hints { get; set; }
+        public string[]? fields { get; set; }
+        public required string[][] data { get; set; }
+        public string[]? notes { get; set; }
+        public int? total { get; set; }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
