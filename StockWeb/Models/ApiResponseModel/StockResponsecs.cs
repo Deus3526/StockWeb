@@ -145,15 +145,113 @@ namespace StockWeb.Models.ApiResponseModel
     }
 
 
+    public class 上市股票盤後外資資訊回傳結果
+    {
+        public string? stat { get; set; }
+        public string? date { get; set; }
+        public string? title { get; set; }
+        public string[]? fields { get; set; }
+        public required string[][] data { get; set; }
+        public string[]? notes { get; set; }
+        public string? hints { get; set; }
+        public int total { get; set; }
+    }
 
 
+    public class 上市股票盤後投信資訊回傳結果
+    {
+        public string? stat { get; set; }
+        public string? date { get; set; }
+        public string? title { get; set; }
+        public string[]? fields { get; set; }
+        public required string[][] data { get; set; }
+        public string[]? notes { get; set; }
+        public string? hints { get; set; }
+        public int? total { get; set; }
+    }
 
 
+    public class 上櫃股票盤後基本資訊回傳結果
+    {
+        public string? reportDate { get; set; }
+        public string? reportTitle { get; set; }
+        public int? iTotalRecords { get; set; }
+        public int? iTotalDisplayRecords { get; set; }
+        public int? colNum { get; set; }
+        public string? listNum { get; set; }
+        public string? totalAmount { get; set; }
+        public string? totalVolumn { get; set; }
+        public string? totalCount { get; set; }
+        public object[]? mmData { get; set; }
+        public required string[][] aaData { get; set; }
+    }
 
 
+    public class 上櫃股票盤後當沖資訊回傳結果
+    {
+        public string? reportDate { get; set; }
+        public int? iTotalRecords { get; set; }
+        public string? stat_0 { get; set; }
+        public string? stat_1 { get; set; }
+        public string? stat_2 { get; set; }
+        public string? stat_3 { get; set; }
+        public string? stat_4 { get; set; }
+        public string? stat_5 { get; set; }
+        public object[]? totalData { get; set; }
+        public required string[][] aaData { get; set; }
+    }
 
 
+    public class 上櫃股票盤後融資融券資訊回傳結果
+    {
+        public string? reportDate { get; set; }
+        public int? iTotalRecords { get; set; }
+        public required string[][] aaData { get; set; }
+        public string[]? tfootData_one { get; set; }
+        public string[]? tfootData_two { get; set; }
+    }
 
+
+    public class 上櫃股票盤後借券資訊回傳結果
+    {
+        public string? reportDate { get; set; }
+        public int? iTotalRecords { get; set; }
+        public required string[][] aaData { get; set; }
+        public object[]? tfootData { get; set; }
+    }
+
+    public class 上櫃股票盤後外資淨買超資訊回傳結果
+    {
+        public string? reportTitle { get; set; }
+        public string? reportDate { get; set; }
+        public int? iTotalRecords { get; set; }
+        public required string[][] aaData { get; set; }
+    }
+
+    public class 上櫃股票盤後外資淨賣超資訊回傳結果
+    {
+        public string? reportTitle { get; set; }
+        public string? reportDate { get; set; }
+        public int? iTotalRecords { get; set; }
+        public required string[][] aaData { get; set; }
+    }
+
+
+    public class 上櫃股票盤後投信淨買超資訊回傳結果
+    {
+        public string? reportTitle { get; set; }
+        public string? reportDate { get; set; }
+        public int? iTotalRecords { get; set; }
+        public required string[][] aaData { get; set; }
+    }
+
+    public class 上櫃股票盤後投信淨賣超資訊回傳結果
+    {
+        public string? reportTitle { get; set; }
+        public string? reportDate { get; set; }
+        public int? iTotalRecords { get; set; }
+        public required string[][] aaData { get; set; }
+    }
 
 
 

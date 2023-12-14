@@ -45,6 +45,7 @@ namespace StockWeb.Controllers
         [HttpPost]
         public async Task<ActionResult> UpdateStockDayInfo(UpdateStockDayInfoParm parm)
         {
+            //throw new NotImplementedException();
             await _stockService.UpdateStockDayInfo(parm.IsHistoricalUpdate!.Value);
             return Ok();
         }

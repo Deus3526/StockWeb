@@ -5,5 +5,17 @@
   "上市股票盤後基本資訊": "https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?type=ALLBUT0999&date=",
   "上市股票盤後當沖資訊": "https://www.twse.com.tw/zh/exchangeReport/TWTB4U?date=",
   "上市股票盤後融資融券資訊": "https://www.twse.com.tw/zh/exchangeReport/MI_MARGN?selectType=ALL&date=",
-  "上市股票盤後借券資訊": "https://www.twse.com.tw/zh/exchangeReport/TWT93U?date="
+  "上市股票盤後借券資訊": "https://www.twse.com.tw/zh/exchangeReport/TWT93U?date=",
+  "上市股票盤後外資資訊": "https://www.twse.com.tw/zh/fund/TWT43U?date=",
+  "上市股票盤後投信資訊": "https://www.twse.com.tw/zh/fund/TWT44U?response=json&date=",
+
+
+  "上櫃股票盤後基本資訊": "https://www.tpex.org.tw/web/stock/aftertrading/daily_close_quotes/stk_quote_result.php?d=",
+  "上櫃股票盤後當沖資訊": "https://www.tpex.org.tw/web/stock/trading/intraday_stat/intraday_trading_stat_result.php?d=",
+  "上櫃股票盤後融資融券資訊": "https://www.tpex.org.tw/web/stock/margin_trading/margin_balance/margin_bal_result.php?d=",
+  "上櫃股票盤後借券資訊": "https://www.tpex.org.tw/web/stock/margin_trading/margin_sbl/margin_sbl_result.php?d=",
+  "上櫃股票盤後外資淨買超資訊": "https://www.tpex.org.tw/web/stock/3insti/qfii_trading/forgtr_result.php?t=D&type=buy&d=",
+  "上櫃股票盤後外資淨賣超資訊": "https://www.tpex.org.tw/web/stock/3insti/qfii_trading/forgtr_result.php?t=D&type=sell&d=",
+  "上櫃股票盤後投信淨買超資訊": "https://www.tpex.org.tw/web/stock/3insti/sitc_trading/sitctr_result.php?t=D&type=buy&d=",
+  "上櫃股票盤後投信淨賣超資訊": "https://www.tpex.org.tw/web/stock/3insti/sitc_trading/sitctr_result.php?t=D&type=sell&d="
 }

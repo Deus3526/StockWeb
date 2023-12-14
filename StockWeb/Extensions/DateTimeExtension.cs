@@ -46,7 +46,7 @@ namespace StockWeb.Extensions
         /// </summary>
         /// <param name="date"></param>
         /// <returns></returns>
-        public static string ToDateFormateString2(this DateOnly date)
+        public static string ToDateFormateForOtc(this DateOnly date)
         {
             return date.ToString("yyy/MM/dd", culture);
         }

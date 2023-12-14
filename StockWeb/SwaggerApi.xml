@@ -59,11 +59,18 @@
             <param name="date"></param>
             <returns></returns>
         </member>
-        <member name="M:StockWeb.Extensions.DateTimeExtension.ToDateFormateString2(System.DateOnly)">
+        <member name="M:StockWeb.Extensions.DateTimeExtension.ToDateFormateForOtc(System.DateOnly)">
             <summary>
             返回111/05/26的格式
             </summary>
             <param name="date"></param>
+            <returns></returns>
+        </member>
+        <member name="M:StockWeb.Extensions.StringExtensions.ToDouble(System.String)">
+            <summary>
+            嘗試轉換成double，如果轉換失敗回傳0
+            </summary>
+            <param name="value"></param>
             <returns></returns>
         </member>
         <member name="P:StockWeb.Models.RequestParms.LoginParm.account">
@@ -92,7 +99,7 @@
         </member>
         <member name="M:StockWeb.Services.ServicesForControllers.StockService.UpdateStockDayInfo(System.Boolean)">
             <summary>
-            依據參數isHistoricalUpdate往前或往後更新日成交資訊，如果Db沒有資料，插入2021/1/1的資料
+            依據參數isHistoricalUpdate往前或往後更新日成交資訊，如果Db沒有資料，插入2021/1/4的資料
             </summary>
             <param name="isHistoricalUpdate"></param>
             <returns></returns>

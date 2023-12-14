@@ -101,7 +101,7 @@ namespace StockWeb.StartUpConfigure
     {
         public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
         {
-            // 标签的优先排序
+            // 標籤的優先排序
             var tagOrder = new List<string> 
             { 
                 Tags.登入相關, 

@@ -34,7 +34,11 @@ namespace StockWeb.StartUpConfigure
         public override async Task Invoke(AspectContext context, AspectDelegate next)
         {
             IWebHostEnvironment _env=context.ServiceProvider.GetService<IWebHostEnvironment>()!;
-            ILogger<LoggingInterceptorAttribute> _logger = context.ServiceProvider.GetService<ILogger<LoggingInterceptorAttribute>>()!;
+            //ILogger<LoggingInterceptorAttribute> _logger = context.ServiceProvider.GetService<ILogger<LoggingInterceptorAttribute>>()!;
+            var loggerType = typeof(ILogger<>).MakeGenericType(context.Implementation.GetType().BaseType!);
+            var _logger = (context.ServiceProvider.GetService(loggerType) as ILogger)!;
+
+
             MethodName = MethodName ?? context.ImplementationMethod.Name;
             ErrorMessage = ErrorMessage ?? $"{MethodName} : 發生錯誤";
             try

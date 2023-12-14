@@ -37,7 +37,7 @@ public partial class StockDayInfo
 
     public double 周轉率 { get; set; }
 
-    public int 當沖成交張數 { get; set; }
+    public double 當沖率 { get; set; }
 
     public int 融資買入 { get; set; }
 
