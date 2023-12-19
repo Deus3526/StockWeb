@@ -66,6 +66,13 @@
             <param name="date"></param>
             <returns></returns>
         </member>
+        <member name="M:StockWeb.Extensions.DateTimeExtension.ToDateOnly(System.String)">
+            <summary>
+            將 111/05/26的字串轉換為DateOnly物件
+            </summary>
+            <param name="s"></param>
+            <returns></returns>
+        </member>
         <member name="M:StockWeb.Extensions.StringExtensions.ToDouble(System.String)">
             <summary>
             嘗試轉換成double，如果轉換失敗回傳0
@@ -117,6 +124,14 @@
             </summary>
             <param name="startDate"></param>
             <param name="endDate"></param>
+            <returns></returns>
+        </member>
+        <member name="M:StockWeb.Services.ServicesForControllers.StockService.取得上一個交易日的收盤價(System.Int32,System.DateOnly)">
+            <summary>
+            有時候成交量是0的時候，Api回傳的收盤價會是--，這個時候就使用這個method從資料庫拿前一個交易的收盤價
+            </summary>
+            <param name="stockId"></param>
+            <param name="date"></param>
             <returns></returns>
         </member>
         <member name="P:StockWeb.StartUpConfigure.LoggingInterceptorAttribute.MethodName">

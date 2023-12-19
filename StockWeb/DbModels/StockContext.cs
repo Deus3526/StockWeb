@@ -15,6 +15,8 @@ public partial class StockContext : DbContext
     {
     }
 
+    public virtual DbSet<MarketDayInfo> MarketDayInfos { get; set; }
+
     public virtual DbSet<StockBaseInfo> StockBaseInfos { get; set; }
 
     public virtual DbSet<StockDayInfo> StockDayInfos { get; set; }
@@ -27,6 +29,13 @@ public partial class StockContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<MarketDayInfo>(entity =>
+        {
+            entity.HasKey(e => e.Date);
+
+            entity.ToTable("MarketDayInfo");
+        });
+
         modelBuilder.Entity<StockBaseInfo>(entity =>
         {
             entity.HasKey(e => e.StockId);

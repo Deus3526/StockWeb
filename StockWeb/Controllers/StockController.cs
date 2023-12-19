@@ -34,7 +34,7 @@ namespace StockWeb.Controllers
         public async Task<ActionResult> UpdateStockBaseInfo()
         {
             await _stockService.UpdateStockBaseInfo();
-            return Ok();
+            return NoContent();
         }
 
         /// <summary>
@@ -47,7 +47,7 @@ namespace StockWeb.Controllers
         {
             //throw new NotImplementedException();
             await _stockService.UpdateStockDayInfo(parm.IsHistoricalUpdate!.Value);
-            return Ok();
+            return NoContent();
         }
     }
 }

@@ -17,5 +17,7 @@
   "上櫃股票盤後外資淨買超資訊": "https://www.tpex.org.tw/web/stock/3insti/qfii_trading/forgtr_result.php?t=D&type=buy&d=",
   "上櫃股票盤後外資淨賣超資訊": "https://www.tpex.org.tw/web/stock/3insti/qfii_trading/forgtr_result.php?t=D&type=sell&d=",
   "上櫃股票盤後投信淨買超資訊": "https://www.tpex.org.tw/web/stock/3insti/sitc_trading/sitctr_result.php?t=D&type=buy&d=",
-  "上櫃股票盤後投信淨賣超資訊": "https://www.tpex.org.tw/web/stock/3insti/sitc_trading/sitctr_result.php?t=D&type=sell&d="
+  "上櫃股票盤後投信淨賣超資訊": "https://www.tpex.org.tw/web/stock/3insti/sitc_trading/sitctr_result.php?t=D&type=sell&d=",
+
+  "上市大盤成交資訊": "https://www.twse.com.tw/rwd/zh/afterTrading/FMTQIK?response=json&date="
 }

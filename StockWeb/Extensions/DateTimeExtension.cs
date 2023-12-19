@@ -50,5 +50,17 @@ namespace StockWeb.Extensions
         {
             return date.ToString("yyy/MM/dd", culture);
         }
+
+
+        /// <summary>
+        /// 將 111/05/26的字串轉換為DateOnly物件
+        /// </summary>
+        /// <param name="s"></param>
+        /// <returns></returns>
+        public static DateOnly ToDateOnly(this string s)
+        {
+            DateOnly date = DateOnly.ParseExact(s, "yyy/MM/dd", culture);
+            return date;
+        }
     }
 }

@@ -5,9 +5,9 @@ namespace StockWeb.DbModels;
 
 public partial class StockDayInfo
 {
-    public int StockId { get; set; }
-
     public DateOnly Date { get; set; }
+
+    public int StockId { get; set; }
 
     public double 漲幅 { get; set; }
 
@@ -76,6 +76,8 @@ public partial class StockDayInfo
     public double? Ma120 { get; set; }
 
     public double? Ma240 { get; set; }
+
+    public double? BollingTop { get; set; }
 
     public virtual StockBaseInfo Stock { get; set; } = null!;
 }

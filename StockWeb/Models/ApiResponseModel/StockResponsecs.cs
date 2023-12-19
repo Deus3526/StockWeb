@@ -1,5 +1,6 @@
 ﻿using StockWeb.DbModels;
 using StockWeb.Enums;
+using StockWeb.Extensions;
 using System.Collections.Concurrent;
 
 namespace StockWeb.Models.ApiResponseModel
@@ -252,6 +253,43 @@ namespace StockWeb.Models.ApiResponseModel
         public int? iTotalRecords { get; set; }
         public required string[][] aaData { get; set; }
     }
+
+
+
+    public class 上市大盤成交資訊回傳結果
+    {
+        public string? stat { get; set; }
+        public string? date { get; set; }
+        public string? title { get; set; }
+        public string? hints { get; set; }
+        public string[]? fields { get; set; }
+        public required string[][] data { get; set; }
+        public string[]? notes { get; set; }
+
+        public List<MarketDayInfo> ToMarketDayInfo()
+        {
+            List<MarketDayInfo> result = new List<MarketDayInfo>();
+            foreach (var s in data)
+            {
+                MarketDayInfo marketDayInfo = new MarketDayInfo
+                {
+                    Date = s[0].ToDateOnly(),
+                    成交張數 =Convert.ToInt32(decimal.Parse(s[1])/1000),
+                    成交金額 = Convert.ToInt64(decimal.Parse(s[2])),
+                    成交筆數= Convert.ToInt32(decimal.Parse(s[3])),
+                    大盤指數 = Convert.ToDouble(decimal.Parse(s[4])),
+                    漲跌 = Convert.ToDouble(decimal.Parse(s[5])),
+                };
+                result.Add(marketDayInfo);
+            }
+            return result;
+        }
+    }
+
+
+
+
+
 
 
 
