@@ -74,8 +74,6 @@ namespace StockWeb.Models.ApiResponseModel
         }
     }
 
-
-
     public class 上市股票盤後基本資訊回傳結果
     {
         public required Table[] tables { get; set; }

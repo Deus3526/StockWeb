@@ -22,6 +22,9 @@ namespace StockWeb.Services.ServicesForControllers
         private readonly IConfiguration _config;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<StockService> _logger;
+
+        //因為刪除資料跟更新上市與上櫃資料的時候可能都會用到DbContext，這樣同一個實例的DbContext會打架，要馬用非同步鎖鎖住，要馬注入ServiceScopeFactory來CeateScope取得新的DbContext
+        private readonly SemaphoreSlim _semaphoreSlimForDbContext = new SemaphoreSlim(1, 1);
         public StockService(StockContext db, IConfiguration config, IHttpClientFactory httpClientFactory, ILogger<StockService> logger)
         {
             _db = db;
@@ -40,7 +43,7 @@ namespace StockWeb.Services.ServicesForControllers
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
         public virtual async Task UpdateStockBaseInfo()
         {
-            List<StockBaseInfo> stockBaseInfos = _db.StockBaseInfos.ToList();
+            List<StockBaseInfo> stockBaseInfos = await _db.StockBaseInfos.ToListAsync();
             ConcurrentBag<StockBaseInfo> bags = new ConcurrentBag<StockBaseInfo>();
             List<Task> tasks = new List<Task>();
             tasks.Add(取得上市股票基本訊息_計算流通張數(bags));
@@ -174,11 +177,20 @@ namespace StockWeb.Services.ServicesForControllers
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
         protected virtual async Task DeleteDayInfoRange(DateOnly? startDate, DateOnly? endDate)
         {
-            await _db.StockDayInfos.Where(s =>
-                 (startDate == null ? true : s.Date >= startDate) &&
-                 (endDate == null ? true : s.Date <= endDate)
-             ).ExecuteDeleteAsync();
-            return;
+            await _semaphoreSlimForDbContext.WaitAsync(); // 等待獲得信號量
+            try
+            {
+                await _db.StockDayInfos.Where(s =>
+                     (startDate == null ? true : s.Date >= startDate) &&
+                     (endDate == null ? true : s.Date <= endDate)
+                 ).ExecuteDeleteAsync();
+                return;
+            }
+            finally
+            {
+                _semaphoreSlimForDbContext.Release(); // 完成後釋放信號量
+            }
+
         }
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
         protected virtual async Task UpdateTseDayInfo(ConcurrentBag<StockDayInfo> dayInfoBags, DateOnly date, List<StockBaseInfo> baseInfos)
@@ -271,6 +283,7 @@ namespace StockWeb.Services.ServicesForControllers
             }
             return;
         }
+
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
         protected virtual async Task 更新上市股票盤後融資融券資訊(ConcurrentBag<StockDayInfo> dayInfoBags, DateOnly date)
         {
@@ -667,7 +680,7 @@ namespace StockWeb.Services.ServicesForControllers
         /// <returns></returns>
         private async Task<double> 取得上一個交易日的收盤價(int stockId,DateOnly date)
         {
-            await _semaphoreSlimFor取得上一個交易日的收盤價.WaitAsync(); // 等待獲得信號量
+            await _semaphoreSlimForDbContext.WaitAsync(); // 等待獲得信號量
             try
             {
                 var q = await _db.StockDayInfos.AsNoTracking()
@@ -680,12 +693,10 @@ namespace StockWeb.Services.ServicesForControllers
             }
             finally
             {
-                _semaphoreSlimFor取得上一個交易日的收盤價.Release(); // 完成後釋放信號量
+                _semaphoreSlimForDbContext.Release(); // 完成後釋放信號量
             }
 
         }
-        //因為更新上市與上櫃資料的時候可能都會用到這個method，這樣同一個實例的DbContext會打架，要馬用非同步鎖鎖住，要馬注入ServiceScopeFactory來CeateScope取得新的DbContext
-        private readonly SemaphoreSlim _semaphoreSlimFor取得上一個交易日的收盤價 = new SemaphoreSlim(1, 1); 
         #endregion
 
 
