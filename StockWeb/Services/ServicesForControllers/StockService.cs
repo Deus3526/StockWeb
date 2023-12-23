@@ -13,6 +13,7 @@ using StockWeb.StaticData;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 using System.Collections.Generic;
 using System.Security.Cryptography;
+using StockWeb.Models.ViewModels;
 
 namespace StockWeb.Services.ServicesForControllers
 {
@@ -699,6 +700,27 @@ namespace StockWeb.Services.ServicesForControllers
         }
         #endregion
 
+
+        #region 股票條件篩選過濾
+        public async Task<List<Strategy1ViewModel>> Strategy1(DateOnly date)
+        {
+            //var q = _db.StockDayInfos.Include(s => s.Stock).AsNoTracking().Where(s => s.Date <= date).OrderBy(s=>s.StockId).ThenBy(s=>s.Date).Select(s => new Strategy1ViewModel
+            //{
+            //    StockId = s.StockId,
+            //    StockName = s.Stock.StockName,
+            //    StockAmount=s.Stock.StockAmount,
+            //    BuyAmount=EF.Functions.Sum(s.投信買賣超, EF.Functions.Over().PartitionBy(s.StockId).OrderBy(s.Date).Rows().FromPreceding(19).ToCurrentRow())!.Value,
+            //    Date=s.Date
+            //}).AsSingleQuery();
+            //var q2 = q.Where(r => r.BuyAmount >= r.StockAmount * 0.01 && r.Date==date).ToList();
+            //return q2.ToList();
+
+            var q =await _db.Database.SqlQuery<Strategy1ViewModel>($"exec Strategy1 {date} ").ToListAsync();
+            //return q.OrderByDescending(x=>x.BuyRate).ToList();
+            return q.ToList();
+
+        }
+        #endregion
 
     }
 }

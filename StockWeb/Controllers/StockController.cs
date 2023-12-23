@@ -10,6 +10,7 @@ using StockWeb.Models.ApiResponseModel;
 using StockWeb.Models.RequestParms;
 using StockWeb.Services.ServicesForControllers;
 using StockWeb.StartUpConfigure;
+using System.ComponentModel.DataAnnotations;
 
 namespace StockWeb.Controllers
 {
@@ -48,6 +49,25 @@ namespace StockWeb.Controllers
             //throw new NotImplementedException();
             await _stockService.UpdateStockDayInfo(parm.IsHistoricalUpdate!.Value);
             return NoContent();
+        }
+
+        /// <summary>
+        /// 20個交易日內，投信買超超過總張數1%
+        /// </summary>
+        /// <param name="date" example="2023-08-01"></param>
+        /// <returns></returns>
+        //[HttpGet]
+        //public async Task<ActionResult> Strategy1([FromQuery]DateTimeOffset date)
+        //{
+        //    var result=await _stockService.Strategy1(DateOnly.FromDateTime(date.Date));
+        //    return Ok(result);
+        //}
+        [HttpGet]
+        [OutputCache(Duration = 600)]// Duration以秒為單位
+        public async Task<ActionResult> Strategy1(DateOnly date)
+        {
+            var result = await _stockService.Strategy1(date);
+            return Ok(result);
         }
     }
 }

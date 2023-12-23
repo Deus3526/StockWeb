@@ -55,6 +55,7 @@ namespace StockWeb
             builder.Services.AddSingleton<CustomExceptionHandler>();
             builder.Services.AddScoped<StockService>();
             builder.Services.AddHttpClient();
+            builder.Services.AddOutputCache();
             //builder.Services.AddDistributedMemoryCache();  //如果之後要用Redis這種分布式緩存，可以先用這個頂著，即便預設也是在本地中儲存數據，但跟Redis是一樣的介面
             var app = builder.Build();
             app.UseRequestLogMiddleware();
@@ -70,7 +71,7 @@ namespace StockWeb
             
             app.UseAuthentication();
             app.UseAuthorization();
-
+            app.UseOutputCache();
             app.MapControllers();
 
             app.Run();

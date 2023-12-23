@@ -31,6 +31,13 @@
             <param name="parm"></param>
             <returns></returns>
         </member>
+        <member name="M:StockWeb.Controllers.StockController.Strategy1(System.DateOnly)">
+            <summary>
+            20個交易日內，投信買超超過總張數1%
+            </summary>
+            <param name="date" example="2023-08-01"></param>
+            <returns></returns>
+        </member>
         <member name="M:StockWeb.DbModels.StockBaseInfo.UpdateStockBaseInfo(StockWeb.DbModels.StockBaseInfo)">
             <summary>
             輸入一個新的StockBaseInfo來更新來自DB的StockBaseInfo的資訊，ID要一樣
