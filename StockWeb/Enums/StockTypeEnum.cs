@@ -2,8 +2,8 @@
 {
     public enum StockTypeEnum
     {
-        UnKnown,
-        tse,
-        otc
+        UnKnown=0,
+        tse=1,
+        otc=2
     }
 }

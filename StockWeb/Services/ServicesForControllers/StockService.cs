@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using StockWeb.Extensions;
 using StockWeb.StartUpConfigure;
 using Zomp.EFCore.WindowFunctions;
-using StockWeb.StaticData;
+using StockWeb.ConstData;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 using System.Collections.Generic;
 using System.Security.Cryptography;
@@ -73,14 +73,7 @@ namespace StockWeb.Services.ServicesForControllers
             var url = _config["上市股票基本訊息_計算流通張數"];
             HttpClient client = _httpClientFactory.CreateClient();
             List<上市股票基本資訊>? res = null;
-            try
-            {
-                res = await client.GetFromJsonAsync<List<上市股票基本資訊>>(url);
-            }
-            catch
-            {
-                throw new CustomErrorResponseException("取得上市股票基本訊息時發生錯誤", StatusCodes.Status502BadGateway);
-            }
+            res = await client.GetFromJsonAsync<List<上市股票基本資訊>>(url);
             ArgumentNullException.ThrowIfNull(res);
             foreach (上市股票基本資訊 s in res)
             {
@@ -108,19 +101,11 @@ namespace StockWeb.Services.ServicesForControllers
         {
             var url = _config["上櫃股票基本訊息_發行股數"];
             HttpClient client = _httpClientFactory.CreateClient();
-            try
-            {
-                var res = await client.GetFromJsonAsync<上櫃股票基本資訊_發行股數回傳結果>(url);
-                ArgumentNullException.ThrowIfNull(res);
-                res.轉換為上櫃股票基本資訊_流通股數(bags);
-                res = null;
-
-                return;
-            }
-            catch
-            {
-                throw new CustomErrorResponseException("取得上市股票基本訊息時發生錯誤", StatusCodes.Status502BadGateway);
-            }
+            var res = await client.GetFromJsonAsync<上櫃股票基本資訊_發行股數回傳結果>(url);
+            ArgumentNullException.ThrowIfNull(res);
+            res.轉換為上櫃股票基本資訊_流通股數(bags);
+            res = null;
+            return;
         }
         #endregion
 
