@@ -49,19 +49,19 @@ namespace StockWeb.Models.ApiResponseModel
         public object[]? note { get; set; }
         public string[][]? aaData { get; set; }
 
-        public void 轉換為上櫃股票基本資訊_流通股數(ConcurrentBag<StockBaseInfo> bags)
+        public void 轉換為上櫃股票基本資訊_流通股數(ConcurrentDictionary<int, StockBaseInfo> concurrentBaseInfos)
         {
             ArgumentNullException.ThrowIfNull(aaData);
             foreach (string[] s in aaData)
             {
                 if (int.TryParse(s[1], out int stockId) == false) continue;
-                StockBaseInfo? baseInfo = bags.FirstOrDefault(b => b.StockId == stockId);
+                StockBaseInfo? baseInfo = concurrentBaseInfos.GetValueOrDefault(stockId);
                 if (baseInfo == null)
                 {
                     baseInfo = new StockBaseInfo();
                     baseInfo.StockId = stockId;
                     baseInfo.StockType = StockTypeEnum.otc;
-                    bags.Add(baseInfo);
+                    concurrentBaseInfos[stockId]=baseInfo;
                 }
                 baseInfo.StockName = s[2].Trim();
                 decimal 發行股數 = decimal.Parse(s[3]);

@@ -44,23 +44,23 @@ namespace StockWeb.Services.ServicesForControllers
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
         public virtual async Task UpdateStockBaseInfo()
         {
-            List<StockBaseInfo> stockBaseInfos = await _db.StockBaseInfos.ToListAsync();
-            ConcurrentBag<StockBaseInfo> bags = new ConcurrentBag<StockBaseInfo>();
+            Dictionary<int,StockBaseInfo> BaseInfos = await _db.StockBaseInfos.ToDictionaryAsync(s=>s.StockId,s=>s);
+            ConcurrentDictionary<int,StockBaseInfo> concurrentBaseInfos = new ConcurrentDictionary<int, StockBaseInfo>();
             List<Task> tasks = new List<Task>();
-            tasks.Add(取得上市股票基本訊息_計算流通張數(bags));
-            tasks.Add(取得上櫃股票基本訊息_發行股數(bags));
+            tasks.Add(取得上市股票基本訊息_計算流通張數(concurrentBaseInfos));
+            tasks.Add(取得上櫃股票基本訊息_發行股數(concurrentBaseInfos));
 
             await Task.WhenAll(tasks);
-            foreach (var bag in bags)
+            foreach (var kvp in concurrentBaseInfos)
             {
-                StockBaseInfo? baseInfo = stockBaseInfos.FirstOrDefault(s => s.StockId == bag.StockId);
+                StockBaseInfo? baseInfo = BaseInfos.GetValueOrDefault(kvp.Key);
                 if (baseInfo == null)
                 {
-                    _db.StockBaseInfos.Add(bag);
+                    _db.StockBaseInfos.Add(kvp.Value);
                 }
                 else
                 {
-                    baseInfo.UpdateStockBaseInfo(bag);
+                    baseInfo.UpdateStockBaseInfo(kvp.Value);
                 }
             }
             await _db.SaveChangesAsync();
@@ -68,7 +68,7 @@ namespace StockWeb.Services.ServicesForControllers
         }
 
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
-        protected virtual async Task 取得上市股票基本訊息_計算流通張數(ConcurrentBag<StockBaseInfo> bags)
+        protected virtual async Task 取得上市股票基本訊息_計算流通張數(ConcurrentDictionary<int, StockBaseInfo> concurrentBaseInfos)
         {
             var url = _config["上市股票基本訊息_計算流通張數"];
             HttpClient client = _httpClientFactory.CreateClient();
@@ -79,13 +79,13 @@ namespace StockWeb.Services.ServicesForControllers
             {
                 ArgumentNullException.ThrowIfNull(s.公司代號);
                 int stockId = s.公司代號.Value;
-                StockBaseInfo? baseInfo = bags.FirstOrDefault(b => b.StockId == stockId);
+                StockBaseInfo? baseInfo = concurrentBaseInfos.GetValueOrDefault(stockId);
                 if (baseInfo == null)
                 {
                     baseInfo = new StockBaseInfo();
                     baseInfo.StockId = stockId;
                     baseInfo.StockType = StockTypeEnum.tse;
-                    bags.Add(baseInfo);
+                    concurrentBaseInfos[stockId] = baseInfo;
                 }
                 ArgumentNullException.ThrowIfNull(s.公司簡稱);
                 baseInfo.StockName = s.公司簡稱.Trim();
@@ -97,13 +97,13 @@ namespace StockWeb.Services.ServicesForControllers
         }
 
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
-        protected virtual async Task 取得上櫃股票基本訊息_發行股數(ConcurrentBag<StockBaseInfo> bags)
+        protected virtual async Task 取得上櫃股票基本訊息_發行股數(ConcurrentDictionary<int, StockBaseInfo> concurrentBaseInfos)
         {
             var url = _config["上櫃股票基本訊息_發行股數"];
             HttpClient client = _httpClientFactory.CreateClient();
             var res = await client.GetFromJsonAsync<上櫃股票基本資訊_發行股數回傳結果>(url);
             ArgumentNullException.ThrowIfNull(res);
-            res.轉換為上櫃股票基本資訊_流通股數(bags);
+            res.轉換為上櫃股票基本資訊_流通股數(concurrentBaseInfos);
             res = null;
             return;
         }
@@ -136,21 +136,16 @@ namespace StockWeb.Services.ServicesForControllers
         /// <returns></returns>
         public virtual async Task UpdateStockDayInfoByDate(DateOnly date)
         {
-            ConcurrentBag<StockDayInfo> dayInfoBags = _db.StockBaseInfos.AsNoTracking().Select(s => new StockDayInfo { StockId = s.StockId, Date = date }).ToConcurrentBag();
-            List<StockBaseInfo> baseInfos = await _db.StockBaseInfos.AsNoTracking().ToListAsync();
+            var concurrentDayInfos =await  _db.StockBaseInfos.AsNoTracking().Select(s => new StockDayInfo { StockId = s.StockId, Date = date }).ToConcurrentDictionaryAsync(s=>s.StockId,s=>s);
+            var baseInfos = await _db.StockBaseInfos.AsNoTracking().ToDictionaryAsync(s => s.StockId, s => s);
             List<Task> tasks = new List<Task>();
             tasks.Add(DeleteDayInfoRange(date, date));
-            tasks.Add(UpdateTseDayInfo(dayInfoBags, date, baseInfos));
-            tasks.Add(UpdateOtcDayInfo(dayInfoBags, date, baseInfos));
+            tasks.Add(UpdateTseDayInfo(concurrentDayInfos, date, baseInfos));
+            tasks.Add(UpdateOtcDayInfo(concurrentDayInfos, date, baseInfos));
             await Task.WhenAll(tasks);
 
-             _db.StockDayInfos.AddRange(dayInfoBags);
+             _db.StockDayInfos.AddRange(concurrentDayInfos.Values);
             await _db.SaveChangesAsync();
-            //foreach(var d in dayInfoBags)
-            //{
-            //    _db.StockDayInfos.Add(d);
-            //    _db.SaveChanges();
-            //}
             await UpdateMovingAverage(date);
             return;
         }
@@ -179,47 +174,47 @@ namespace StockWeb.Services.ServicesForControllers
 
         }
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
-        protected virtual async Task UpdateTseDayInfo(ConcurrentBag<StockDayInfo> dayInfoBags, DateOnly date, List<StockBaseInfo> baseInfos)
+        protected virtual async Task UpdateTseDayInfo(ConcurrentDictionary<int,StockDayInfo> concurrentDayInfo, DateOnly date, Dictionary<int,StockBaseInfo> baseInfos)
         {
             List<Task> tasks = new List<Task>();
 
             //當沖率計算需要基本資訊的成交量，所以要確保在其之後執行
             tasks.Add(Task.Run(async () =>
             {
-                await 更新上市股票盤後基本資訊(dayInfoBags, date, baseInfos);
-                await 更新上市股票盤後當沖資訊(dayInfoBags, date);
+                await 更新上市股票盤後基本資訊(concurrentDayInfo, date, baseInfos);
+                await 更新上市股票盤後當沖資訊(concurrentDayInfo, date);
             }));
-            tasks.Add(更新上市股票盤後融資融券資訊(dayInfoBags, date));
-            tasks.Add(更新上市股票盤後借券資訊(dayInfoBags, date));
-            tasks.Add(更新上市股票盤後外資資訊(dayInfoBags, date));
-            tasks.Add(更新上市股票盤後投信資訊(dayInfoBags, date));
+            tasks.Add(更新上市股票盤後融資融券資訊(concurrentDayInfo, date));
+            tasks.Add(更新上市股票盤後借券資訊(concurrentDayInfo, date));
+            tasks.Add(更新上市股票盤後外資資訊(concurrentDayInfo, date));
+            tasks.Add(更新上市股票盤後投信資訊(concurrentDayInfo, date));
 
             await Task.WhenAll(tasks);
            
         }
 
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
-        protected virtual async Task UpdateOtcDayInfo(ConcurrentBag<StockDayInfo> dayInfoBags, DateOnly date, List<StockBaseInfo> baseInfos)
+        protected virtual async Task UpdateOtcDayInfo(ConcurrentDictionary<int,StockDayInfo> concurrentDayInfos, DateOnly date, Dictionary<int,StockBaseInfo> baseInfos)
         {
             List<Task> tasks = new List<Task>();
             //當沖率計算需要基本資訊的成交量，所以要確保在其之後執行
             tasks.Add(Task.Run(async () =>
             {
-                await 更新上櫃股票盤後基本資訊(dayInfoBags, date, baseInfos);
-                await 更新上櫃股票盤後當沖資訊(dayInfoBags, date);
+                await 更新上櫃股票盤後基本資訊(concurrentDayInfos, date, baseInfos);
+                await 更新上櫃股票盤後當沖資訊(concurrentDayInfos, date);
             }));
-            tasks.Add(更新上櫃股票盤後融資融券資訊(dayInfoBags,date));
-            tasks.Add(更新上櫃股票盤後借券資訊(dayInfoBags,date));
-            tasks.Add(更新上櫃股票盤後外資淨買超資訊(dayInfoBags,date));
-            tasks.Add(更新上櫃股票盤後外資淨賣超資訊(dayInfoBags, date));
-            tasks.Add(更新上櫃股票盤後投信淨買超資訊(dayInfoBags, date));
-            tasks.Add(更新上櫃股票盤後投信淨賣超資訊(dayInfoBags, date));
+            tasks.Add(更新上櫃股票盤後融資融券資訊(concurrentDayInfos,date));
+            tasks.Add(更新上櫃股票盤後借券資訊(concurrentDayInfos,date));
+            tasks.Add(更新上櫃股票盤後外資淨買超資訊(concurrentDayInfos,date));
+            tasks.Add(更新上櫃股票盤後外資淨賣超資訊(concurrentDayInfos, date));
+            tasks.Add(更新上櫃股票盤後投信淨買超資訊(concurrentDayInfos, date));
+            tasks.Add(更新上櫃股票盤後投信淨賣超資訊(concurrentDayInfos, date));
             await Task.WhenAll(tasks);
         }
 
 
         [LoggingInterceptor(StatusCode =StatusCodes.Status502BadGateway)]
-        protected virtual async Task 更新上市股票盤後基本資訊(ConcurrentBag<StockDayInfo> dayInfoBags, DateOnly date,List<StockBaseInfo> baseInfos)
+        protected virtual async Task 更新上市股票盤後基本資訊(ConcurrentDictionary<int,StockDayInfo> concurrentDayInfos, DateOnly date,Dictionary<int,StockBaseInfo> baseInfos)
         {
             string url = _config["上市股票盤後基本資訊"] + date.ToDateFormateForTse();
             HttpClient client = _httpClientFactory.CreateClient();
@@ -230,9 +225,9 @@ namespace StockWeb.Services.ServicesForControllers
             foreach (var row in datas)
             {
                 if (int.TryParse(row[0], out var stockId) == false) continue;
-                StockDayInfo? dayInfo = dayInfoBags.FirstOrDefault(d => d.StockId == stockId);
+                StockDayInfo? dayInfo = concurrentDayInfos.GetValueOrDefault(stockId);
                 if (dayInfo == null) continue;
-                StockBaseInfo baseInfo = baseInfos.First(b=>b.StockId==stockId);
+                StockBaseInfo baseInfo = baseInfos[stockId];
                 dayInfo.成交量 = Convert.ToInt32(decimal.Parse(row[2])) / 1000;
                 bool 是否有成交價 = double.TryParse(row[5], out double temp開盤價);
                 if (!是否有成交價) temp開盤價 = await 取得上一個交易日的收盤價(stockId, date); //如果沒有成交價格，上用上一個交易日的收盤價
@@ -251,7 +246,7 @@ namespace StockWeb.Services.ServicesForControllers
 
         }
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
-        protected virtual async Task 更新上市股票盤後當沖資訊(ConcurrentBag<StockDayInfo> dayInfoBags, DateOnly date)
+        protected virtual async Task 更新上市股票盤後當沖資訊(ConcurrentDictionary<int, StockDayInfo> concurrentDayInfos, DateOnly date)
         {
             string url = _config["上市股票盤後當沖資訊"] + date.ToDateFormateForTse();
             HttpClient client = _httpClientFactory.CreateClient();
@@ -262,7 +257,7 @@ namespace StockWeb.Services.ServicesForControllers
             foreach(var row in datas)
             {
                 if (int.TryParse(row[0], out var stockId) == false) continue;
-                StockDayInfo? dayInfo = dayInfoBags.FirstOrDefault(d => d.StockId == stockId);
+                StockDayInfo? dayInfo = concurrentDayInfos.GetValueOrDefault(stockId);
                 if (dayInfo == null) continue;
                 decimal 當沖成交張數 = decimal.Parse(row[3]) / 1000;
                 dayInfo.當沖率 =dayInfo.成交量>0? Convert.ToDouble(當沖成交張數 / dayInfo.成交量) : 0;
@@ -271,7 +266,7 @@ namespace StockWeb.Services.ServicesForControllers
         }
 
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
-        protected virtual async Task 更新上市股票盤後融資融券資訊(ConcurrentBag<StockDayInfo> dayInfoBags, DateOnly date)
+        protected virtual async Task 更新上市股票盤後融資融券資訊(ConcurrentDictionary<int, StockDayInfo> concurrentDayInfos, DateOnly date)
         {
             string url = _config["上市股票盤後融資融券資訊"] + date.ToDateFormateForTse();
             HttpClient client = _httpClientFactory.CreateClient();
@@ -282,7 +277,7 @@ namespace StockWeb.Services.ServicesForControllers
             foreach(var row in datas)
             {
                 if (int.TryParse(row[0], out var stockId) == false) continue;
-                StockDayInfo? dayInfo = dayInfoBags.FirstOrDefault(d => d.StockId == stockId);
+                StockDayInfo? dayInfo = concurrentDayInfos.GetValueOrDefault(stockId);
                 if (dayInfo == null) continue;
                 dayInfo.融資買入 = Convert.ToInt32(decimal.Parse(row[2]));
                 dayInfo.融資賣出= Convert.ToInt32(decimal.Parse(row[3]));
@@ -296,7 +291,7 @@ namespace StockWeb.Services.ServicesForControllers
             return;
         }
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
-        protected virtual async Task 更新上市股票盤後借券資訊(ConcurrentBag<StockDayInfo> dayInfoBags, DateOnly date)
+        protected virtual async Task 更新上市股票盤後借券資訊(ConcurrentDictionary<int, StockDayInfo> concurrentDayInfos, DateOnly date)
         {
             string url = _config["上市股票盤後借券資訊"] + date.ToDateFormateForTse();
             HttpClient client = _httpClientFactory.CreateClient();
@@ -308,7 +303,7 @@ namespace StockWeb.Services.ServicesForControllers
             foreach(var row in datas)
             {
                 if (int.TryParse(row[0], out var stockId) == false) continue;
-                StockDayInfo? dayInfo = dayInfoBags.FirstOrDefault(d => d.StockId == stockId);
+                StockDayInfo? dayInfo = concurrentDayInfos.GetValueOrDefault(stockId);
                 if (dayInfo == null) continue;
                 dayInfo.借券買入 = Convert.ToInt32(decimal.Parse(row[10]) / 1000);
                 dayInfo.借券賣出= Convert.ToInt32(decimal.Parse(row[9]) / 1000);
@@ -319,7 +314,7 @@ namespace StockWeb.Services.ServicesForControllers
         }
 
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
-        protected virtual async Task 更新上市股票盤後外資資訊(ConcurrentBag<StockDayInfo> dayInfoBags, DateOnly date)
+        protected virtual async Task 更新上市股票盤後外資資訊(ConcurrentDictionary<int, StockDayInfo> concurrentDayInfos, DateOnly date)
         {
             string url = _config["上市股票盤後外資資訊"] + date.ToDateFormateForTse();
             HttpClient client = _httpClientFactory.CreateClient();
@@ -331,7 +326,7 @@ namespace StockWeb.Services.ServicesForControllers
             foreach (var row in datas)
             {
                 if (int.TryParse(row[0], out var stockId) == false) continue;
-                StockDayInfo? dayInfo = dayInfoBags.FirstOrDefault(d => d.StockId == stockId);
+                StockDayInfo? dayInfo = concurrentDayInfos.GetValueOrDefault(stockId);
                 if (dayInfo == null) continue;
                 dayInfo.外資買入 = Convert.ToInt32(decimal.Parse(row[2]) / 1000);
                 dayInfo.外資賣出 = Convert.ToInt32(decimal.Parse(row[3]) / 1000);
@@ -341,7 +336,7 @@ namespace StockWeb.Services.ServicesForControllers
         }
 
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
-        protected virtual async Task 更新上市股票盤後投信資訊(ConcurrentBag<StockDayInfo> dayInfoBags, DateOnly date)
+        protected virtual async Task 更新上市股票盤後投信資訊(ConcurrentDictionary<int, StockDayInfo> concurrentDayInfos, DateOnly date)
         {
             string url = _config["上市股票盤後投信資訊"] + date.ToDateFormateForTse();
             HttpClient client = _httpClientFactory.CreateClient();
@@ -353,7 +348,7 @@ namespace StockWeb.Services.ServicesForControllers
             foreach (var row in datas)
             {
                 if (int.TryParse(row[1], out var stockId) == false) continue;
-                StockDayInfo? dayInfo = dayInfoBags.FirstOrDefault(d => d.StockId == stockId);
+                StockDayInfo? dayInfo = concurrentDayInfos.GetValueOrDefault(stockId);
                 if (dayInfo == null) continue;
                 dayInfo.投信買入 = Convert.ToInt32(decimal.Parse(row[3]) / 1000);
                 dayInfo.投信賣出 = Convert.ToInt32(decimal.Parse(row[4]) / 1000);
@@ -363,7 +358,7 @@ namespace StockWeb.Services.ServicesForControllers
         }
 
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
-        protected virtual async Task 更新上櫃股票盤後基本資訊(ConcurrentBag<StockDayInfo> dayInfoBags, DateOnly date, List<StockBaseInfo> baseInfos)
+        protected virtual async Task 更新上櫃股票盤後基本資訊(ConcurrentDictionary<int,StockDayInfo> concurrentDayInfos, DateOnly date, Dictionary<int,StockBaseInfo> baseInfos)
         {
             string url = _config["上櫃股票盤後基本資訊"] + date.ToDateFormateForOtc();
             HttpClient client = _httpClientFactory.CreateClient();
@@ -375,9 +370,9 @@ namespace StockWeb.Services.ServicesForControllers
             foreach (var row in datas)
             {
                 if (int.TryParse(row[0], out var stockId) == false) continue;
-                StockDayInfo? dayInfo = dayInfoBags.FirstOrDefault(d => d.StockId == stockId);
+                StockDayInfo? dayInfo = concurrentDayInfos.GetValueOrDefault(stockId);
                 if (dayInfo == null) continue;
-                StockBaseInfo baseInfo = baseInfos.First(b => b.StockId == stockId);
+                StockBaseInfo baseInfo = baseInfos[stockId];
                 bool 是否有成交價 = double.TryParse(row[2], out double temp收盤價);
                 if(!是否有成交價) temp收盤價= await 取得上一個交易日的收盤價(stockId, date); //如果沒有成交價格，上用上一個交易日的收盤價
                 dayInfo.收盤價 = temp收盤價;
@@ -395,7 +390,7 @@ namespace StockWeb.Services.ServicesForControllers
         }
 
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
-        protected virtual async Task 更新上櫃股票盤後當沖資訊(ConcurrentBag<StockDayInfo> dayInfoBags, DateOnly date)
+        protected virtual async Task 更新上櫃股票盤後當沖資訊(ConcurrentDictionary<int,StockDayInfo> concurrentDayInfos, DateOnly date)
         {
             string url = _config["上櫃股票盤後當沖資訊"] + date.ToDateFormateForOtc();
             HttpClient client = _httpClientFactory.CreateClient();
@@ -407,7 +402,7 @@ namespace StockWeb.Services.ServicesForControllers
             foreach (var row in datas)
             {
                 if (int.TryParse(row[0], out var stockId) == false) continue;
-                StockDayInfo? dayInfo = dayInfoBags.FirstOrDefault(d => d.StockId == stockId);
+                StockDayInfo? dayInfo = concurrentDayInfos.GetValueOrDefault(stockId);
                 if (dayInfo == null) continue;
                 decimal 當沖成交張數 = decimal.Parse(row[3])/1000;
                 dayInfo.當沖率 =dayInfo.成交量>0? Convert.ToDouble(當沖成交張數 / dayInfo.成交量):0;
@@ -416,7 +411,7 @@ namespace StockWeb.Services.ServicesForControllers
         }
 
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
-        protected virtual async Task 更新上櫃股票盤後融資融券資訊(ConcurrentBag<StockDayInfo> dayInfoBags, DateOnly date)
+        protected virtual async Task 更新上櫃股票盤後融資融券資訊(ConcurrentDictionary<int, StockDayInfo> concurrentDayInfos, DateOnly date)
         {
             string url = _config["上櫃股票盤後融資融券資訊"] + date.ToDateFormateForOtc();
             HttpClient client = _httpClientFactory.CreateClient();
@@ -428,7 +423,7 @@ namespace StockWeb.Services.ServicesForControllers
             foreach (var row in datas)
             {
                 if (int.TryParse(row[0], out var stockId) == false) continue;
-                StockDayInfo? dayInfo = dayInfoBags.FirstOrDefault(d => d.StockId == stockId);
+                StockDayInfo? dayInfo = concurrentDayInfos.GetValueOrDefault(stockId);
                 if (dayInfo == null) continue;
                 dayInfo.融資買入 = Convert.ToInt32(decimal.Parse(row[3]));
                 dayInfo.融資賣出 = Convert.ToInt32(decimal.Parse(row[4]));
@@ -443,7 +438,7 @@ namespace StockWeb.Services.ServicesForControllers
         }
 
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
-        protected virtual async Task 更新上櫃股票盤後借券資訊(ConcurrentBag<StockDayInfo> dayInfoBags, DateOnly date)
+        protected virtual async Task 更新上櫃股票盤後借券資訊(ConcurrentDictionary<int, StockDayInfo> concurrentDayInfos, DateOnly date)
         {
             string url = _config["上櫃股票盤後借券資訊"] + date.ToDateFormateForOtc();
             HttpClient client = _httpClientFactory.CreateClient();
@@ -455,7 +450,7 @@ namespace StockWeb.Services.ServicesForControllers
             foreach (var row in datas)
             {
                 if (int.TryParse(row[0], out var stockId) == false) continue;
-                StockDayInfo? dayInfo = dayInfoBags.FirstOrDefault(d => d.StockId == stockId);
+                StockDayInfo? dayInfo = concurrentDayInfos.GetValueOrDefault(stockId);
                 if (dayInfo == null) continue;
                 dayInfo.借券買入 = Convert.ToInt32(decimal.Parse(row[10]) / 1000);
                 dayInfo.借券賣出 = Convert.ToInt32(decimal.Parse(row[9]) / 1000);
@@ -466,7 +461,7 @@ namespace StockWeb.Services.ServicesForControllers
         }
 
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
-        protected virtual async Task 更新上櫃股票盤後外資淨買超資訊(ConcurrentBag<StockDayInfo> dayInfoBags, DateOnly date)
+        protected virtual async Task 更新上櫃股票盤後外資淨買超資訊(ConcurrentDictionary<int, StockDayInfo> concurrentDayInfos, DateOnly date)
         {
             string url = _config["上櫃股票盤後外資淨買超資訊"] + date.ToDateFormateForOtc();
             HttpClient client = _httpClientFactory.CreateClient();
@@ -478,7 +473,7 @@ namespace StockWeb.Services.ServicesForControllers
             foreach (var row in datas)
             {
                 if (int.TryParse(row[1], out var stockId) == false) continue;
-                StockDayInfo? dayInfo = dayInfoBags.FirstOrDefault(d => d.StockId == stockId);
+                StockDayInfo? dayInfo = concurrentDayInfos.GetValueOrDefault(stockId);
                 if (dayInfo == null) continue;
                 dayInfo.外資買入 =Convert.ToInt32(decimal.Parse(row[3]));
                 dayInfo.外資賣出 = Convert.ToInt32(decimal.Parse(row[4]));
@@ -488,7 +483,7 @@ namespace StockWeb.Services.ServicesForControllers
         }
 
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
-        protected virtual async Task 更新上櫃股票盤後外資淨賣超資訊(ConcurrentBag<StockDayInfo> dayInfoBags, DateOnly date)
+        protected virtual async Task 更新上櫃股票盤後外資淨賣超資訊(ConcurrentDictionary<int, StockDayInfo> concurrentDayInfos, DateOnly date)
         {
             string url = _config["上櫃股票盤後外資淨賣超資訊"] + date.ToDateFormateForOtc();
             HttpClient client = _httpClientFactory.CreateClient();
@@ -500,7 +495,7 @@ namespace StockWeb.Services.ServicesForControllers
             foreach (var row in datas)
             {
                 if (int.TryParse(row[1], out var stockId) == false) continue;
-                StockDayInfo? dayInfo = dayInfoBags.FirstOrDefault(d => d.StockId == stockId);
+                StockDayInfo? dayInfo = concurrentDayInfos.GetValueOrDefault(stockId);
                 if (dayInfo == null) continue;
                 dayInfo.外資買入 = Convert.ToInt32(decimal.Parse(row[3]));
                 dayInfo.外資賣出 = Convert.ToInt32(decimal.Parse(row[4]));
@@ -510,7 +505,7 @@ namespace StockWeb.Services.ServicesForControllers
         }
 
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
-        protected virtual async Task 更新上櫃股票盤後投信淨買超資訊(ConcurrentBag<StockDayInfo> dayInfoBags, DateOnly date)
+        protected virtual async Task 更新上櫃股票盤後投信淨買超資訊(ConcurrentDictionary<int, StockDayInfo> concurrentDayInfos, DateOnly date)
         {
             string url = _config["上櫃股票盤後投信淨買超資訊"] + date.ToDateFormateForOtc();
             HttpClient client = _httpClientFactory.CreateClient();
@@ -522,7 +517,7 @@ namespace StockWeb.Services.ServicesForControllers
             foreach (var row in datas)
             {
                 if (int.TryParse(row[1], out var stockId) == false) continue;
-                StockDayInfo? dayInfo = dayInfoBags.FirstOrDefault(d => d.StockId == stockId);
+                StockDayInfo? dayInfo = concurrentDayInfos.GetValueOrDefault(stockId);
                 if (dayInfo == null) continue;
                 dayInfo.投信買入 = Convert.ToInt32(decimal.Parse(row[3]));
                 dayInfo.投信賣出 = Convert.ToInt32(decimal.Parse(row[4]));
@@ -532,7 +527,7 @@ namespace StockWeb.Services.ServicesForControllers
         }
 
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
-        protected virtual async Task 更新上櫃股票盤後投信淨賣超資訊(ConcurrentBag<StockDayInfo> dayInfoBags, DateOnly date)
+        protected virtual async Task 更新上櫃股票盤後投信淨賣超資訊(ConcurrentDictionary<int, StockDayInfo> concurrentDayInfos, DateOnly date)
         {
             string url = _config["上櫃股票盤後投信淨賣超資訊"] + date.ToDateFormateForOtc();
             HttpClient client = _httpClientFactory.CreateClient();
@@ -544,7 +539,7 @@ namespace StockWeb.Services.ServicesForControllers
             foreach (var row in datas)
             {
                 if (int.TryParse(row[1], out var stockId) == false) continue;
-                StockDayInfo? dayInfo = dayInfoBags.FirstOrDefault(d => d.StockId == stockId);
+                StockDayInfo? dayInfo = concurrentDayInfos.GetValueOrDefault(stockId);
                 if (dayInfo == null) continue;
                 dayInfo.投信買入 = Convert.ToInt32(decimal.Parse(row[3]));
                 dayInfo.投信賣出 = Convert.ToInt32(decimal.Parse(row[4]));

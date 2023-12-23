@@ -1,12 +1,18 @@
-﻿using System.Collections.Concurrent;
+﻿using Microsoft.EntityFrameworkCore;
+using System.Collections.Concurrent;
 
 namespace StockWeb.Extensions
 {
     public static class EnumerableExtensions
     {
-        public static ConcurrentBag<T> ToConcurrentBag<T>(this IEnumerable<T> source)
+        public static async Task<ConcurrentDictionary<TKey, TValue>> ToConcurrentDictionaryAsync<TSource, TKey, TValue>(
+                this IQueryable<TSource> source,
+                Func<TSource, TKey> keySelector,
+                Func<TSource, TValue> valueSelector)
+                where TKey : notnull
         {
-            return new ConcurrentBag<T>(source);
+            var dictionary = await source.ToDictionaryAsync(keySelector, valueSelector);
+            return new ConcurrentDictionary<TKey, TValue>(dictionary);
         }
     }
 }
