@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -46,15 +47,20 @@ namespace StockWeb
             {
                 options.UseSqlServer(builder.Configuration.GetConnectionString("Stock"), sqlOptions => sqlOptions.UseWindowFunctions());
             });
-
+            builder.Services.AddDbContextFactory<StockContext>(options =>
+            {
+                options.UseSqlServer(builder.Configuration.GetConnectionString("Stock"), sqlOptions => sqlOptions.UseWindowFunctions());
+            });
+ 
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.SwaggerConfigure();
+            builder.HttpClientConfigure();
+            builder.Services.AddScoped<RequestApiService>();
             builder.AspectCoreConfigure();
             builder.Services.AddSingleton<RequestLogMiddleware>();
             builder.Services.AddSingleton<CustomExceptionHandler>();
             builder.Services.AddScoped<StockService>();
-            builder.Services.AddHttpClient();
             builder.Services.AddOutputCache();
             //builder.Services.AddDistributedMemoryCache();  //如果之後要用Redis這種分布式緩存，可以先用這個頂著，即便預設也是在本地中儲存數據，但跟Redis是一樣的介面
             var app = builder.Build();

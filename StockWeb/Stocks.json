@@ -1,15 +1,15 @@
 {
   "上市股票基本訊息_計算流通張數": "https://openapi.twse.com.tw/v1/opendata/t187ap03_L",
-  "上櫃股票基本訊息_發行股數": "https://www.tpex.org.tw/web/stock/aftertrading/daily_mktval/mkt_result.php",
-
   "上市股票盤後基本資訊": "https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?type=ALLBUT0999&date=",
   "上市股票盤後當沖資訊": "https://www.twse.com.tw/zh/exchangeReport/TWTB4U?date=",
   "上市股票盤後融資融券資訊": "https://www.twse.com.tw/zh/exchangeReport/MI_MARGN?selectType=ALL&date=",
   "上市股票盤後借券資訊": "https://www.twse.com.tw/zh/exchangeReport/TWT93U?date=",
   "上市股票盤後外資資訊": "https://www.twse.com.tw/zh/fund/TWT43U?date=",
   "上市股票盤後投信資訊": "https://www.twse.com.tw/zh/fund/TWT44U?response=json&date=",
+  "上市大盤成交資訊": "https://www.twse.com.tw/rwd/zh/afterTrading/FMTQIK?response=json&date=",
 
 
+  "上櫃股票基本訊息_發行股數": "https://www.tpex.org.tw/web/stock/aftertrading/daily_mktval/mkt_result.php",
   "上櫃股票盤後基本資訊": "https://www.tpex.org.tw/web/stock/aftertrading/daily_close_quotes/stk_quote_result.php?d=",
   "上櫃股票盤後當沖資訊": "https://www.tpex.org.tw/web/stock/trading/intraday_stat/intraday_trading_stat_result.php?d=",
   "上櫃股票盤後融資融券資訊": "https://www.tpex.org.tw/web/stock/margin_trading/margin_balance/margin_bal_result.php?d=",
@@ -19,5 +19,39 @@
   "上櫃股票盤後投信淨買超資訊": "https://www.tpex.org.tw/web/stock/3insti/sitc_trading/sitctr_result.php?t=D&type=buy&d=",
   "上櫃股票盤後投信淨賣超資訊": "https://www.tpex.org.tw/web/stock/3insti/sitc_trading/sitctr_result.php?t=D&type=sell&d=",
 
-  "上市大盤成交資訊": "https://www.twse.com.tw/rwd/zh/afterTrading/FMTQIK?response=json&date="
+
+
+
+  "TWSE": {
+    "BaseAddress": "https://www.twse.com.tw/",
+    "Route": {
+      "上市股票盤後基本資訊": "rwd/zh/afterTrading/MI_INDEX?type=ALLBUT0999",
+      "上市股票盤後當沖資訊": "zh/exchangeReport/TWTB4U",
+      "上市股票盤後融資融券資訊": "zh/exchangeReport/MI_MARGN?selectType=ALL",
+      "上市股票盤後借券資訊": "zh/exchangeReport/TWT93U",
+      "上市股票盤後外資資訊": "zh/fund/TWT43U",
+      "上市股票盤後投信資訊": "zh/fund/TWT44U?response=json",
+      "上市大盤成交資訊": "rwd/zh/afterTrading/FMTQIK?response=json"
+    }
+  },
+  "openapiTwse": {
+    "BaseAddress": "https://openapi.twse.com.tw/",
+    "Route": {
+      "上市股票基本訊息_計算流通張數": "v1/opendata/t187ap03_L"
+    }
+  },
+  "TPEX": {
+    "BaseAddress": "https://www.tpex.org.tw/",
+    "Route": {
+      "上櫃股票盤後基本資訊": "web/stock/aftertrading/daily_close_quotes/stk_quote_result.php",
+      "上櫃股票盤後當沖資訊": "web/stock/trading/intraday_stat/intraday_trading_stat_result.php",
+      "上櫃股票盤後融資融券資訊": "web/stock/margin_trading/margin_balance/margin_bal_result.php",
+      "上櫃股票盤後借券資訊": "web/stock/margin_trading/margin_sbl/margin_sbl_result.php",
+      "上櫃股票盤後外資淨買超資訊": "web/stock/3insti/qfii_trading/forgtr_result.php?t=D&type=buy",
+      "上櫃股票盤後外資淨賣超資訊": "web/stock/3insti/qfii_trading/forgtr_result.php?t=D&type=sell",
+      "上櫃股票盤後投信淨買超資訊": "web/stock/3insti/sitc_trading/sitctr_result.php?t=D&type=buy",
+      "上櫃股票盤後投信淨賣超資訊": "web/stock/3insti/sitc_trading/sitctr_result.php?t=D&type=sell",
+      "上櫃股票基本訊息_發行股數": "web/stock/aftertrading/daily_mktval/mkt_result.php"
+    }
+  }
 }
