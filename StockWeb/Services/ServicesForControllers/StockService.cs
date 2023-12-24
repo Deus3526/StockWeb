@@ -20,18 +20,14 @@ namespace StockWeb.Services.ServicesForControllers
     public class StockService
     {
         private readonly StockContext _db;
-        private readonly IConfiguration _config;
-        //private readonly IHttpClientFactory _httpClientFactory;
         private readonly RequestApiService _requestApiService;
         private readonly ILogger<StockService> _logger;
 
         //因為刪除資料跟更新上市與上櫃資料的時候可能都會用到DbContext，這樣同一個實例的DbContext會打架，要馬用非同步鎖鎖住，要馬注入ServiceScopeFactory來CeateScope取得新的DbContext
         private readonly SemaphoreSlim _semaphoreSlimForDbContext = new SemaphoreSlim(1, 1);
-        public StockService(StockContext db, IConfiguration config, IHttpClientFactory httpClientFactory, ILogger<StockService> logger,RequestApiService requestApiService)
+        public StockService(StockContext db,ILogger<StockService> logger,RequestApiService requestApiService)
         {
             _db = db;
-            _config = config;
-            //_httpClientFactory = httpClientFactory;
             _logger = logger;
             _requestApiService = requestApiService;
         }
@@ -689,8 +685,8 @@ namespace StockWeb.Services.ServicesForControllers
         protected virtual async Task<List<MarketDayInfo>> 更新上市大盤盤後資訊_以月為單位(DateOnly date)
         {
             await _db.MarketDayInfos.Where(m => m.Date.Year == date.Year && m.Date.Month == date.Month).ExecuteDeleteAsync();
-            string url = _config["上市大盤成交資訊"] + date.ToDateFormateForTse();
-            await _db.MarketDayInfos.Where(m => m.Date == date).ExecuteDeleteAsync();
+            //string url = _config["上市大盤成交資訊"] + date.ToDateFormateForTse();
+            //await _db.MarketDayInfos.Where(m => m.Date == date).ExecuteDeleteAsync();
 
             //HttpClient client = _httpClientFactory.CreateClient();
             //上市大盤成交資訊回傳結果? res = await client.GetFromJsonAsync<上市大盤成交資訊回傳結果>(url);
