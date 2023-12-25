@@ -5,6 +5,7 @@
         public const string OK = "OK";
         public const string BaseAddress = "BaseAddress";
         public const string Route = "Route";
+        public const string HttpLogMessage = "HttpLogMessage";
     }
 
     public static class ConstHttpClinetName
