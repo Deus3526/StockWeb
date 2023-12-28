@@ -135,6 +135,12 @@ namespace StockWeb.Services.ServicesForControllers
             tasks.Add(UpdateOtcDayInfo(concurrentDayInfos, date, baseInfos));
             await Task.WhenAll(tasks);
 
+            foreach (var kvp in concurrentDayInfos)
+            {
+                //如果是成交量為0的話，還是會有資料，這樣在前面update的時候會取得上一個交易日的收盤價
+                //但是如果是減資之類的停止交易的狀況 或是 未上市或已下市，不會有資料，此時收盤價會是0，不視為交易日
+                if (kvp.Value.收盤價 == 0) concurrentDayInfos.Remove(kvp.Key,out StockDayInfo? dayInfo);
+            }
             _db.StockDayInfos.AddRange(concurrentDayInfos.Values);
             await _db.SaveChangesAsync();
             await UpdateMovingAverage(date);
@@ -594,15 +600,14 @@ namespace StockWeb.Services.ServicesForControllers
                 marketDayInfosDates = (await 更新上市大盤盤後資訊_以月為單位(date)).Select(m => m.Date).ToList();
             }
 
-            if (marketDayInfosDates.Any(m => m == date)) return date;
-            DateOnly recentlytDate = marketDayInfosDates.Where(m => m > date).DefaultIfEmpty().Min();
+            DateOnly recentlytDate = marketDayInfosDates.Where(m => m >= date).DefaultIfEmpty().Min();
             if (recentlytDate != DateOnly.MinValue) return recentlytDate;
             else
             {
                 if(date.AddDays(1).Month==date.Month)
                 {
                     marketDayInfosDates = (await 更新上市大盤盤後資訊_以月為單位(date)).Select(m => m.Date).ToList();
-                    var d=marketDayInfosDates.Where(d=>d>date).Min();
+                    var d=marketDayInfosDates.Where(d=>d>=date).DefaultIfEmpty().Min();
                     if (d != DateOnly.MinValue) return d;
                 }
                 marketDayInfosDates = (await 更新上市大盤盤後資訊_以月為單位(date.AddMonths(1))).Select(m => m.Date).ToList();
