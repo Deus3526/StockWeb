@@ -7,14 +7,14 @@ namespace StockWeb.Models.RequestParms
         /// <summary>
         /// 
         /// </summary>
-        /// <example>deus.ko3526</example>
+        /// <example>Test123</example>
         [Required]
         public string account { get; set; }=string.Empty;
 
         /// <summary>
         /// 
         /// </summary>
-        /// <example>deus.ko3526</example>
+        /// <example>Test123</example>
         [Required]
         public string password { get; set; }=string.Empty;
     }

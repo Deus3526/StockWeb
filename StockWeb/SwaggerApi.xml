@@ -91,13 +91,13 @@
             <summary>
             
             </summary>
-            <example>deus.ko3526</example>
+            <example>Test123</example>
         </member>
         <member name="P:StockWeb.Models.RequestParms.LoginParm.password">
             <summary>
             
             </summary>
-            <example>deus.ko3526</example>
+            <example>Test123</example>
         </member>
         <member name="P:StockWeb.Models.RequestParms.UpdateStockDayInfoParm.IsHistoricalUpdate">
             <summary>
