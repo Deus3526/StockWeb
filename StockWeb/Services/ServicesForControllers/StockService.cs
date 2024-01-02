@@ -525,32 +525,32 @@ namespace StockWeb.Services.ServicesForControllers
         protected virtual async Task UpdateMovingAverage(DateOnly date)
         {
             ////使用 Zomp.EFCore.WindowFunctions.SqlServer 來在C#使用窗口函數更新日線....布林通道的標準差不支持，而且需要先ToList在下第二個where，不然兩個where條件會合併，所以沒寫成功，還是先暫時用預存程序的方式
-            //List<StockDayInfo> dayInfos=_db.StockDayInfos.Where(s=>s.Date == date).ToList();
-            //var movingAverages = _db.StockDayInfos.Where(s=>s.Date>date.AddYears(-1).AddMonths(-1))
+            //List<StockDayInfo> dayInfos = _db.StockDayInfos.Where(s => s.Date == date).ToList();
+            //var movingAverages = _db.StockDayInfos.Where(s => s.Date > date.AddYears(-1).AddMonths(-1))
             //    .Select(s => new
             //    {
             //        s.StockId,
             //        s.Date,
-            //        Ma5 = EF.Functions.Avg(s.收盤價,EF.Functions.Over().PartitionBy(s.StockId).OrderBy(s.Date).Rows().FromPreceding(4).ToCurrentRow()),
+            //        Ma5 = EF.Functions.Avg(s.收盤價, EF.Functions.Over().PartitionBy(s.StockId).OrderBy(s.Date).Rows().FromPreceding(4).ToCurrentRow()),
             //        Ma10 = EF.Functions.Avg(s.收盤價, EF.Functions.Over().PartitionBy(s.StockId).OrderBy(s.Date).Rows().FromPreceding(9).ToCurrentRow()),
             //        Ma20 = EF.Functions.Avg(s.收盤價, EF.Functions.Over().PartitionBy(s.StockId).OrderBy(s.Date).Rows().FromPreceding(19).ToCurrentRow()),
             //        Ma60 = EF.Functions.Avg(s.收盤價, EF.Functions.Over().PartitionBy(s.StockId).OrderBy(s.Date).Rows().FromPreceding(59).ToCurrentRow()),
             //        Ma120 = EF.Functions.Avg(s.收盤價, EF.Functions.Over().PartitionBy(s.StockId).OrderBy(s.Date).Rows().FromPreceding(119).ToCurrentRow()),
             //        Ma240 = EF.Functions.Avg(s.收盤價, EF.Functions.Over().PartitionBy(s.StockId).OrderBy(s.Date).Rows().FromPreceding(239).ToCurrentRow()),
-            //        BollingTop= EF.Functions.Avg(s.收盤價, EF.Functions.Over().PartitionBy(s.StockId).OrderBy(s.Date).Rows().FromPreceding(19).ToCurrentRow())+2* EF.Functions.StandardDeviationPopulation(s.收盤價, EF.Functions.Over().PartitionBy(s.StockId).OrderBy(s.Date).Rows().FromPreceding(19).ToCurrentRow())
+            //        //BollingTop = EF.Functions.Avg(s.收盤價, EF.Functions.Over().PartitionBy(s.StockId).OrderBy(s.Date).Rows().FromPreceding(19).ToCurrentRow()) + 2 * EF.Functions.StandardDeviationPopulation(s.收盤價, EF.Functions.Over().PartitionBy(s.StockId).OrderBy(s.Date).Rows().FromPreceding(19).ToCurrentRow())
             //    }).ToList().Where(s => s.Date == date);
 
             ////var s = movingAverages.ToQueryString();
             //foreach (var ma in movingAverages)
             //{
-            //    StockDayInfo dayInfo=dayInfos.Find(d=>d.StockId==ma.StockId)!;
+            //    StockDayInfo dayInfo = dayInfos.Find(d => d.StockId == ma.StockId)!;
             //    dayInfo.Ma5 = ma.Ma5;
             //    dayInfo.Ma10 = ma.Ma10;
             //    dayInfo.Ma20 = ma.Ma20;
             //    dayInfo.Ma60 = ma.Ma60;
             //    dayInfo.Ma120 = ma.Ma120;
             //    dayInfo.Ma240 = ma.Ma240;
-            //    dayInfo.BollingTop=ma.BollingTop;
+            //    //dayInfo.BollingTop = ma.BollingTop;
             //}
             //await _db.SaveChangesAsync();
 
@@ -610,7 +610,11 @@ namespace StockWeb.Services.ServicesForControllers
                     var d=marketDayInfosDates.Where(d=>d>=date).DefaultIfEmpty().Min();
                     if (d != DateOnly.MinValue) return d;
                 }
-                marketDayInfosDates = (await 更新上市大盤盤後資訊_以月為單位(date.AddMonths(1))).Select(m => m.Date).ToList();
+
+                //用下一個月的1號來取
+                var nextMonthDate = new DateOnly(date.Year, date.Month, 1);
+                nextMonthDate=nextMonthDate.AddMonths(1);
+                marketDayInfosDates = (await 更新上市大盤盤後資訊_以月為單位(nextMonthDate)).Select(m => m.Date).ToList();
                 return marketDayInfosDates.Where(m => m > date).Min();
             }
         }

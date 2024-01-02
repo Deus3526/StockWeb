@@ -5,7 +5,7 @@ VisualStudioVersion = 17.8.34316.72
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StockWeb", "StockWeb.csproj", "{750B01E2-7CA1-4C7C-A9C1-43A8FCBBBB13}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TimerForUpdateStockDayInfo", "..\TimerForUpdateStockDayInfo\TimerForUpdateStockDayInfo.csproj", "{D26E7249-9F8D-4DA5-97D8-96FE35A6E9F3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TimerForUpdateStockDayInfo", "..\TimerForUpdateStockDayInfo\TimerForUpdateStockDayInfo.csproj", "{D26E7249-9F8D-4DA5-97D8-96FE35A6E9F3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
