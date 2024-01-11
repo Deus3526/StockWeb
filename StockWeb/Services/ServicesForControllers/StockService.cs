@@ -23,7 +23,9 @@ namespace StockWeb.Services.ServicesForControllers
         private readonly RequestApiService _requestApiService;
         private readonly ILogger<StockService> _logger;
 
-        //因為刪除資料跟更新上市與上櫃資料的時候可能都會用到DbContext，這樣同一個實例的DbContext會打架，要馬用非同步鎖鎖住，要馬注入ServiceScopeFactory來CeateScope取得新的DbContext
+        /// <summary>
+        /// 因為刪除資料跟更新上市與上櫃資料的時候可能都會用到DbContext，這樣同一個實例的DbContext會打架，要馬用非同步鎖鎖住，要馬注入ServiceScopeFactory來CeateScope取得新的DbContext
+        /// </summary>
         private readonly SemaphoreSlim _semaphoreSlimForDbContext = new SemaphoreSlim(1, 1);
         public StockService(StockContext db, ILogger<StockService> logger, RequestApiService requestApiService)
         {
