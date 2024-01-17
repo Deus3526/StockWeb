@@ -20,7 +20,6 @@ using StockWeb.StartUpConfigure.Middleware;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Zomp.EFCore.WindowFunctions.SqlServer;
 
 namespace StockWeb
 {
@@ -45,11 +44,11 @@ namespace StockWeb
             builder.JwtConfigure();
             builder.Services.AddDbContext<StockContext>(options =>
             {
-                options.UseSqlServer(builder.Configuration.GetConnectionString("Stock"), sqlOptions => sqlOptions.UseWindowFunctions());
+                options.UseSqlServer(builder.Configuration.GetConnectionString("Stock"));
             });
             builder.Services.AddDbContextFactory<StockContext>(options =>
             {
-                options.UseSqlServer(builder.Configuration.GetConnectionString("Stock"), sqlOptions => sqlOptions.UseWindowFunctions());
+                options.UseSqlServer(builder.Configuration.GetConnectionString("Stock"));
             });
  
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

@@ -8,7 +8,6 @@ using StockWeb.Enums;
 using Microsoft.EntityFrameworkCore;
 using StockWeb.Extensions;
 using StockWeb.StartUpConfigure;
-using Zomp.EFCore.WindowFunctions;
 using StockWeb.ConstData;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 using System.Collections.Generic;
