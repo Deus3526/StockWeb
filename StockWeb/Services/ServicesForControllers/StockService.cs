@@ -110,16 +110,32 @@ namespace StockWeb.Services.ServicesForControllers
         /// <returns></returns>
         public async Task UpdateStockDayInfo(bool isHistoricalUpdate)
         {
-
-            DateOnly date = isHistoricalUpdate ?
-                (await _db.StockDayInfos.Select(s => s.Date).DefaultIfEmpty().MinAsync()).AddDays(-1) :
-                (await _db.StockDayInfos.Select(s => s.Date).DefaultIfEmpty().MaxAsync()).AddDays(1);
-            if (date == DateOnly.MinValue.AddDays(1)) date = new DateOnly(2021, 1, 4);  //如果Db完全沒有日成交資料，從2021/01/04開始計算
+            DateOnly date=await GetDateMaxOrMinFromStockDayInfoAsync(isHistoricalUpdate);
             date = await 取得與參數日期最近的開市日期_若無資料則更新上市大盤盤後資訊(date);
             _logger.LogInformation($"開始更新日成交資訊 : {date}");
 
             await UpdateStockDayInfoByDate(date);
         }
+        /// <summary>
+        /// 取得StockDayInfo最小或最大的交易日期
+        /// </summary>
+        /// <param name="isHistoricalUpdate"></param>
+        /// <returns></returns>
+        private async Task<DateOnly> GetDateMaxOrMinFromStockDayInfoAsync(bool isHistoricalUpdate)
+        {
+            DateOnly? date =null;  //如果Db完全沒有日成交資料，從2021/01/04開始計算
+            if (isHistoricalUpdate)
+            {
+                date = await _db.StockDayInfos.MinAsync(s => (DateOnly?)s.Date);
+            }
+            else
+            {
+                date = await _db.StockDayInfos.MaxAsync(s => (DateOnly?)s.Date);
+            }
+            if(date==null) date = new DateOnly(2021, 1, 4);  //如果Db完全沒有日成交資料，從2021/01/04開始計算
+            return date.Value;
+        }
+
 
         /// <summary>
         /// 更新指定日期的日成交資訊
@@ -595,29 +611,23 @@ namespace StockWeb.Services.ServicesForControllers
         [LoggingInterceptor]
         protected virtual async Task<DateOnly> 取得與參數日期最近的開市日期_若無資料則更新上市大盤盤後資訊(DateOnly date)
         {
-            List<DateOnly> marketDayInfosDates = await _db.MarketDayInfos.Where(m => m.Date.Year == date.Year && m.Date.Month == date.Month).OrderBy(m => m.Date).Select(m => m.Date).ToListAsync();
-            if (marketDayInfosDates.Count == 0)
-            {
-                marketDayInfosDates = (await 更新上市大盤盤後資訊_以月為單位(date)).Select(m => m.Date).ToList();
-            }
+            //先找資料庫是否有更大日期的的大盤資料，沒有的話則更新這個月大盤資料
+             DateOnly? result = await _db.MarketDayInfos.Where(m =>m.Date>date).Select(m => (DateOnly?)m.Date).MinAsync();
+            if (result != null) return result.Value;
+            List<DateOnly>  marketDayInfosDatesUpdated = (await 更新上市大盤盤後資訊_以月為單位(date)).Select(m => m.Date).ToList();
 
-            DateOnly recentlytDate = marketDayInfosDates.Where(m => m >= date).DefaultIfEmpty().Min();
-            if (recentlytDate != DateOnly.MinValue) return recentlytDate;
-            else
-            {
-                if(date.AddDays(1).Month==date.Month)
-                {
-                    marketDayInfosDates = (await 更新上市大盤盤後資訊_以月為單位(date)).Select(m => m.Date).ToList();
-                    var d=marketDayInfosDates.Where(d=>d>=date).DefaultIfEmpty().Min();
-                    if (d != DateOnly.MinValue) return d;
-                }
 
-                //用下一個月的1號來取
-                var nextMonthDate = new DateOnly(date.Year, date.Month, 1);
-                nextMonthDate=nextMonthDate.AddMonths(1);
-                marketDayInfosDates = (await 更新上市大盤盤後資訊_以月為單位(nextMonthDate)).Select(m => m.Date).ToList();
-                return marketDayInfosDates.Where(m => m > date).Min();
-            }
+            //更新月份後，此月份是否有下一個交易日，如果沒有的話要再更新下個月的大盤資料
+            result = marketDayInfosDatesUpdated.Where(m => m > date).Select(m=>(DateOnly?)m).Min();
+            if (result!=null) return result.Value;
+
+            //用下一個月的1號來更新下個月的大盤資料
+            var nextMonthDate = (new DateOnly(date.Year, date.Month, 1)).AddMonths(1);
+            marketDayInfosDatesUpdated = (await 更新上市大盤盤後資訊_以月為單位(nextMonthDate)).Select(m => m.Date).ToList();
+            result = marketDayInfosDatesUpdated.Where(m => m > date).Select(m => (DateOnly?)m).Min();
+            if (result != null) return result.Value;
+
+            throw new CustomErrorResponseException("已經是最新的交易日了");
         }
 
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
@@ -657,8 +667,9 @@ namespace StockWeb.Services.ServicesForControllers
             {
                 _semaphoreSlimForDbContext.Release(); // 完成後釋放信號量
             }
-
         }
+
+
         #endregion
 
 

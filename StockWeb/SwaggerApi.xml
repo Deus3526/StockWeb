@@ -123,6 +123,13 @@
             <param name="isHistoricalUpdate"></param>
             <returns></returns>
         </member>
+        <member name="M:StockWeb.Services.ServicesForControllers.StockService.GetDateMaxOrMinFromStockDayInfoAsync(System.Boolean)">
+            <summary>
+            取得StockDayInfo最小或最大的交易日期
+            </summary>
+            <param name="isHistoricalUpdate"></param>
+            <returns></returns>
+        </member>
         <member name="M:StockWeb.Services.ServicesForControllers.StockService.UpdateStockDayInfoByDate(System.DateOnly)">
             <summary>
             更新指定日期的日成交資訊

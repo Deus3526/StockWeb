@@ -30,7 +30,7 @@ namespace StockWeb
             var builder = WebApplication.CreateBuilder(args);
             
             builder.SerilogConfigure();
-            builder.Configuration.AddJsonFile("Stocks.json", optional: false, reloadOnChange: true);
+            builder.MyConfigConfigure();
             // Add services to the container.
             builder.Services.AddControllers(options => 
             {
@@ -53,6 +53,7 @@ namespace StockWeb
  
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddCors();
             builder.SwaggerConfigure();
             builder.HttpClientConfigure();
             builder.Services.AddScoped<RequestApiService>();
@@ -73,10 +74,18 @@ namespace StockWeb
             app.UserMySwagger();
             app.UseHttpsRedirection();
 
-            
+            if(app.Environment.IsDevelopment())
+            {
+                app.UseCors(builder =>
+                {
+                    builder.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+                });
+            }
+ 
             app.UseAuthentication();
             app.UseAuthorization();
             app.UseOutputCache();
+
             app.MapControllers();
 
             app.Run();
