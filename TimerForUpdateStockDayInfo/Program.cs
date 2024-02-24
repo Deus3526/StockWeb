@@ -51,10 +51,8 @@ namespace TimerForUpdateStockDayInfo
             var jsonContent = JsonSerializer.Serialize(data);
 
             // 使用 StringContent 封裝 JSON 字符串，並設定 Content-Type 為 application/json
-            using (var content = new StringContent(jsonContent, Encoding.UTF8, "application/json"))
-            {
-                return await client.PostAsync(Url, content);
-            }
+            using var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+            return await client.PostAsync(Url, content);
         }
     }
 }

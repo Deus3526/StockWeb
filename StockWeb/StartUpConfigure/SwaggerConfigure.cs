@@ -45,7 +45,7 @@ namespace StockWeb.StartUpConfigure
                                 Id = "Jwt_Login" //與上面的SecurityDefinition的第一個參數要一致
                             }
                         },
-                        new string[] {}
+                        Array.Empty<string>()
                     }
                 });
                 options.DocumentFilter<TagOrderDocumentFilter>();
@@ -74,22 +74,15 @@ namespace StockWeb.StartUpConfigure
 
     public static class ApiGroups
     {
-        public static readonly ApiGroup Stock = new ApiGroup("股票WebApi", "股票資訊從櫃買中心、證交所、公開資訊觀測站取得", "v1");
-        public static readonly ApiGroup Test = new ApiGroup("測試用", "各種機制測試", "v1");
+        public static readonly ApiGroup Stock = new("股票WebApi", "股票資訊從櫃買中心、證交所、公開資訊觀測站取得", "v1");
+        public static readonly ApiGroup Test = new("測試用", "各種機制測試", "v1");
 
     }
-    public class ApiGroup
+    public class ApiGroup(string downListName, string description, string version)
     {
-        public string DownListName { get; }
-        public string Description { get; }
-        public string Version { get; }
-
-        public ApiGroup(string downListName, string description, string version)
-        {
-            DownListName = downListName;
-            Description = description;
-            Version = version;
-        }
+        public string DownListName { get;} = downListName;
+        public string Description { get; } = description;
+        public string Version { get; } = version;
     }
 
     public static class Tags
@@ -114,7 +107,7 @@ namespace StockWeb.StartUpConfigure
                 .ToDictionary(path => path.Key, path => path.Value);
 
             // 更新 Swagger 文档的路径
-            swaggerDoc.Paths = new OpenApiPaths();
+            swaggerDoc.Paths = [];
             foreach (var path in orderedPaths)
             {
                 swaggerDoc.Paths.Add(path.Key, path.Value);

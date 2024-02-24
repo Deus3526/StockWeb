@@ -1,9 +1,13 @@
-﻿using System.Runtime.ExceptionServices;
+﻿using StockWeb.Enums;
+using System.Runtime.ExceptionServices;
 
 namespace StockWeb.StartUpConfigure.Middleware
 {
-    public class CustomExceptionHandler : IMiddleware
+    public class CustomExceptionHandler(ILogger<RequestLogMiddleware> logger, IHostEnvironment env) : IMiddleware
     {
+        private readonly ILogger<RequestLogMiddleware> _logger = logger;
+        private readonly IHostEnvironment _env = env;
+
         public async Task InvokeAsync(HttpContext context, RequestDelegate next)
         {
             try
@@ -17,21 +21,22 @@ namespace StockWeb.StartUpConfigure.Middleware
         }
         private async Task HandleExceptionAsync(HttpContext context, RequestDelegate next, Exception exception)
         {
+            context.Response.ContentType = "application/json";
+            string result = string.Empty;
             switch (exception)
             {
-                case CustomErrorResponseException:
-                    CustomErrorResponseException customException = (CustomErrorResponseException)exception;
-                    context.Response.ContentType = "application/json";
+                case CustomErrorResponseException customException:
                     context.Response.StatusCode = customException.StatusCode;
-                    var result = System.Text.Json.JsonSerializer.Serialize(new { error = customException.Message });
-                    await context.Response.WriteAsync(result);
-
-                    // 繼續執行後續中間件，例如將response寫入log的中間件，但是切記這邊已經寫入回傳訊息了，後續的中間件不能再改動response
+                    result = System.Text.Json.JsonSerializer.Serialize(new { error = customException.Message });
                     break;
+
                 default:
-                    ExceptionDispatchInfo.Capture(exception).Throw(); //// 重新拋出原始異常並保留堆棧跟踪
+                    _logger.LogError($"Error:{{@ExceptionInfo}}-{{@{nameof(LogTypeEnum)}}}", exception, LogTypeEnum.Error);
+                    context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                    result = System.Text.Json.JsonSerializer.Serialize(new { error = "發生未知的錯誤" });
                     break;
             }
+            await context.Response.WriteAsync(result);// 繼續執行後續中間件，例如將response寫入log的中間件，但是切記這邊已經寫入回傳訊息了，後續的中間件不能再改動response
         }
     }
     public static class CustomExceptionHandlerExtension

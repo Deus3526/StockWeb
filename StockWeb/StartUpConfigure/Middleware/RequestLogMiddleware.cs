@@ -7,41 +7,20 @@ using System.Runtime.ExceptionServices;
 
 namespace StockWeb.StartUpConfigure.Middleware
 {
-    public class RequestLogMiddleware : IMiddleware
+    public class RequestLogMiddleware(ILogger<RequestLogMiddleware> logger, IHostEnvironment env) : IMiddleware
     {
-        private readonly ILogger<RequestLogMiddleware> _logger;
-        private readonly IHostEnvironment _env;
-        public RequestLogMiddleware(ILogger<RequestLogMiddleware> logger, IHostEnvironment env)
-        {
-            _logger = logger;
-            _env = env;
-        }
+        private readonly ILogger<RequestLogMiddleware> _logger = logger;
+        private readonly IHostEnvironment _env = env;
+
         public async Task InvokeAsync(HttpContext context, RequestDelegate next)
         {
             var start = DateTimeOffset.UtcNow;
-            try
-            {
-                // 繼續管道中的其他中介軟體
-                await next(context);
-            }
-            catch(Exception ex)
-            {
-                _logger.LogError($"Error:{{@ExceptionInfo}}-{{@{nameof(LogTypeEnum)}}}", ex, LogTypeEnum.Error);
-                if (_env.IsDevelopment())
-                {
-                    ExceptionDispatchInfo.Capture(ex).Throw(); //// 重新拋出原始異常並保留堆棧跟踪，給框架處理錯誤回傳內容，就仍然可在Swagger上直接看到詳細錯誤內容
-                }
-                else
-                {
-                    context.Response.StatusCode = StatusCodes.Status500InternalServerError; //只顯示500錯誤碼
-                }
-                return; 
-            }
-            finally
-            {
-                // 記錄Request跟Response，即使發生了異常也會執行
-                LogResponse(context, start);
-            }
+            
+            // 繼續管道中的其他中介軟體
+            await next(context);
+
+            // 記錄Request跟Response，即使發生了異常也會執行
+            LogResponse(context, start);
         }
 
         private void LogResponse(HttpContext context, DateTimeOffset start)

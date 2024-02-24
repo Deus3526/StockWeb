@@ -16,22 +16,16 @@ using StockWeb.Models.ViewModels;
 
 namespace StockWeb.Services.ServicesForControllers
 {
-    public class StockService
+    public class StockService(StockContext db, ILogger<StockService> logger, RequestApiService requestApiService)
     {
-        private readonly StockContext _db;
-        private readonly RequestApiService _requestApiService;
-        private readonly ILogger<StockService> _logger;
+        private readonly StockContext _db = db;
+        private readonly RequestApiService _requestApiService = requestApiService;
+        private readonly ILogger<StockService> _logger = logger;
 
         /// <summary>
         /// 因為刪除資料跟更新上市與上櫃資料的時候可能都會用到DbContext，這樣同一個實例的DbContext會打架，要馬用非同步鎖鎖住，要馬注入ServiceScopeFactory來CeateScope取得新的DbContext
         /// </summary>
-        private readonly SemaphoreSlim _semaphoreSlimForDbContext = new SemaphoreSlim(1, 1);
-        public StockService(StockContext db, ILogger<StockService> logger, RequestApiService requestApiService)
-        {
-            _db = db;
-            _logger = logger;
-            _requestApiService = requestApiService;
-        }
+        private readonly SemaphoreSlim _semaphoreSlimForDbContext = new(1, 1);
 
 
         #region 更新股票基本資訊表
@@ -44,10 +38,12 @@ namespace StockWeb.Services.ServicesForControllers
         public virtual async Task UpdateStockBaseInfo()
         {
             Dictionary<int, StockBaseInfo> BaseInfos = await _db.StockBaseInfos.ToDictionaryAsync(s => s.StockId, s => s);
-            ConcurrentDictionary<int, StockBaseInfo> concurrentBaseInfos = new ConcurrentDictionary<int, StockBaseInfo>();
-            List<Task> tasks = new List<Task>();
-            tasks.Add(更新上市股票基本訊息_計算流通張數(concurrentBaseInfos));
-            tasks.Add(更新上櫃股票基本訊息_發行股數(concurrentBaseInfos));
+            ConcurrentDictionary<int, StockBaseInfo> concurrentBaseInfos = new();
+            List<Task> tasks = 
+            [
+                更新上市股票基本訊息_計算流通張數(concurrentBaseInfos), 
+                更新上櫃股票基本訊息_發行股數(concurrentBaseInfos)
+            ];
 
             await Task.WhenAll(tasks);
             foreach (var kvp in concurrentBaseInfos)
@@ -77,9 +73,11 @@ namespace StockWeb.Services.ServicesForControllers
                 StockBaseInfo? baseInfo = concurrentBaseInfos.GetValueOrDefault(stockId);
                 if (baseInfo == null)
                 {
-                    baseInfo = new StockBaseInfo();
-                    baseInfo.StockId = stockId;
-                    baseInfo.StockType = StockTypeEnum.tse;
+                    baseInfo = new StockBaseInfo
+                    {
+                        StockId = stockId,
+                        StockType = StockTypeEnum.tse
+                    };
                     concurrentBaseInfos[stockId] = baseInfo;
                 }
                 ArgumentNullException.ThrowIfNull(s.公司簡稱);
@@ -96,7 +94,6 @@ namespace StockWeb.Services.ServicesForControllers
         {
             var res = await _requestApiService.GetFromJsonAsync<上櫃股票基本資訊_發行股數回傳結果>(ConstHttpClinetName.TPEX, ConstRoute.上櫃股票基本訊息_發行股數);
             res.轉換為上櫃股票基本資訊_流通股數(concurrentBaseInfos);
-            res = null;
             return;
         }
         #endregion
@@ -112,7 +109,7 @@ namespace StockWeb.Services.ServicesForControllers
         {
             DateOnly date=await GetDateMaxOrMinFromStockDayInfoAsync(isHistoricalUpdate);
             date = await 取得與參數日期最近的開市日期_若無資料則更新上市大盤盤後資訊(date);
-            _logger.LogInformation($"開始更新日成交資訊 : {date}");
+            _logger.LogInformation("開始更新日成交資訊 : {date}",date);
 
             await UpdateStockDayInfoByDate(date);
         }
@@ -146,10 +143,12 @@ namespace StockWeb.Services.ServicesForControllers
         {
             var concurrentDayInfos = await _db.StockBaseInfos.AsNoTracking().Select(s => new StockDayInfo { StockId = s.StockId, Date = date }).ToConcurrentDictionaryAsync(s => s.StockId, s => s);
             var baseInfos = await _db.StockBaseInfos.AsNoTracking().ToDictionaryAsync(s => s.StockId, s => s);
-            List<Task> tasks = new List<Task>();
-            tasks.Add(DeleteDayInfoRange(date, date));
-            tasks.Add(UpdateTseDayInfo(concurrentDayInfos, date, baseInfos));
-            tasks.Add(UpdateOtcDayInfo(concurrentDayInfos, date, baseInfos));
+            List<Task> tasks =
+            [
+                DeleteDayInfoRange(date, date),
+                UpdateTseDayInfo(concurrentDayInfos, date, baseInfos),
+                UpdateOtcDayInfo(concurrentDayInfos, date, baseInfos),
+            ];
             await Task.WhenAll(tasks);
 
             foreach (var kvp in concurrentDayInfos)
@@ -176,8 +175,8 @@ namespace StockWeb.Services.ServicesForControllers
             try
             {
                 await _db.StockDayInfos.Where(s =>
-                     (startDate == null ? true : s.Date >= startDate) &&
-                     (endDate == null ? true : s.Date <= endDate)
+                     (startDate == null || s.Date >= startDate) &&
+                     (endDate == null || s.Date <= endDate)
                  ).ExecuteDeleteAsync();
                 return;
             }
@@ -190,18 +189,19 @@ namespace StockWeb.Services.ServicesForControllers
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
         protected virtual async Task UpdateTseDayInfo(ConcurrentDictionary<int, StockDayInfo> concurrentDayInfo, DateOnly date, Dictionary<int, StockBaseInfo> baseInfos)
         {
-            List<Task> tasks = new List<Task>();
-
-            //當沖率計算需要基本資訊的成交量，所以要確保在其之後執行
-            tasks.Add(Task.Run(async () =>
-            {
-                await 更新上市股票盤後基本資訊(concurrentDayInfo, date, baseInfos);
-                await 更新上市股票盤後當沖資訊(concurrentDayInfo, date);
-            }));
-            tasks.Add(更新上市股票盤後融資融券資訊(concurrentDayInfo, date));
-            tasks.Add(更新上市股票盤後借券資訊(concurrentDayInfo, date));
-            tasks.Add(更新上市股票盤後外資資訊(concurrentDayInfo, date));
-            tasks.Add(更新上市股票盤後投信資訊(concurrentDayInfo, date));
+            List<Task> tasks =
+            [
+                //當沖率計算需要基本資訊的成交量，所以要確保在其之後執行
+                Task.Run(async () =>
+                {
+                    await 更新上市股票盤後基本資訊(concurrentDayInfo, date, baseInfos);
+                    await 更新上市股票盤後當沖資訊(concurrentDayInfo, date);
+                }),
+                更新上市股票盤後融資融券資訊(concurrentDayInfo, date),
+                更新上市股票盤後借券資訊(concurrentDayInfo, date),
+                更新上市股票盤後外資資訊(concurrentDayInfo, date),
+                更新上市股票盤後投信資訊(concurrentDayInfo, date),
+            ];
 
             await Task.WhenAll(tasks);
 
@@ -210,19 +210,21 @@ namespace StockWeb.Services.ServicesForControllers
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
         protected virtual async Task UpdateOtcDayInfo(ConcurrentDictionary<int, StockDayInfo> concurrentDayInfos, DateOnly date, Dictionary<int, StockBaseInfo> baseInfos)
         {
-            List<Task> tasks = new List<Task>();
-            //當沖率計算需要基本資訊的成交量，所以要確保在其之後執行
-            tasks.Add(Task.Run(async () =>
-            {
-                await 更新上櫃股票盤後基本資訊(concurrentDayInfos, date, baseInfos);
-                await 更新上櫃股票盤後當沖資訊(concurrentDayInfos, date);
-            }));
-            tasks.Add(更新上櫃股票盤後融資融券資訊(concurrentDayInfos, date));
-            tasks.Add(更新上櫃股票盤後借券資訊(concurrentDayInfos, date));
-            tasks.Add(更新上櫃股票盤後外資淨買超資訊(concurrentDayInfos, date));
-            tasks.Add(更新上櫃股票盤後外資淨賣超資訊(concurrentDayInfos, date));
-            tasks.Add(更新上櫃股票盤後投信淨買超資訊(concurrentDayInfos, date));
-            tasks.Add(更新上櫃股票盤後投信淨賣超資訊(concurrentDayInfos, date));
+            List<Task> tasks =
+            [
+                //當沖率計算需要基本資訊的成交量，所以要確保在其之後執行
+                Task.Run(async () =>
+                {
+                    await 更新上櫃股票盤後基本資訊(concurrentDayInfos, date, baseInfos);
+                    await 更新上櫃股票盤後當沖資訊(concurrentDayInfos, date);
+                }),
+                更新上櫃股票盤後融資融券資訊(concurrentDayInfos, date),
+                更新上櫃股票盤後借券資訊(concurrentDayInfos, date),
+                更新上櫃股票盤後外資淨買超資訊(concurrentDayInfos, date),
+                更新上櫃股票盤後外資淨賣超資訊(concurrentDayInfos, date),
+                更新上櫃股票盤後投信淨買超資訊(concurrentDayInfos, date),
+                更新上櫃股票盤後投信淨賣超資訊(concurrentDayInfos, date),
+            ];
             await Task.WhenAll(tasks);
         }
 
@@ -230,8 +232,10 @@ namespace StockWeb.Services.ServicesForControllers
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
         protected virtual async Task 更新上市股票盤後基本資訊(ConcurrentDictionary<int, StockDayInfo> concurrentDayInfos, DateOnly date, Dictionary<int, StockBaseInfo> baseInfos)
         {
-            var parms = new Dictionary<string, string?>();
-            parms.Add("date", date.ToDateFormateForTse());
+            var parms = new Dictionary<string, string?>
+            {
+                { "date", date.ToDateFormateForTse() }
+            };
             var res = await _requestApiService.GetFromJsonAsync<上市股票盤後基本資訊回傳結果>(ConstHttpClinetName.TWSE, ConstRoute.上市股票盤後基本資訊, parms, "更新上市股票盤後基本資訊");
             string[][]? datas = res.tables[8].data;
             ArgumentNullException.ThrowIfNull(datas);
@@ -248,7 +252,7 @@ namespace StockWeb.Services.ServicesForControllers
                 dayInfo.最高價 = 是否有成交價 ? double.Parse(row[6]) : temp開盤價;
                 dayInfo.最低價 = 是否有成交價 ? double.Parse(row[7]) : temp開盤價;
                 dayInfo.收盤價 = 是否有成交價 ? double.Parse(row[8]) : temp開盤價;
-                int direction = row[9].Contains("+") ? 1 : -1;
+                int direction = row[9].Contains('+') ? 1 : -1;
                 double 漲跌價差 = double.Parse(row[10]) * direction;
                 dayInfo.平盤價 = dayInfo.收盤價 - 漲跌價差;
                 dayInfo.漲幅 = dayInfo.平盤價 == 0 ? 0 : 漲跌價差 / dayInfo.平盤價;
@@ -261,8 +265,10 @@ namespace StockWeb.Services.ServicesForControllers
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
         protected virtual async Task 更新上市股票盤後當沖資訊(ConcurrentDictionary<int, StockDayInfo> concurrentDayInfos, DateOnly date)
         {
-            var parms = new Dictionary<string, string?>();
-            parms.Add("date", date.ToDateFormateForTse());
+            var parms = new Dictionary<string, string?>
+            {
+                { "date", date.ToDateFormateForTse() }
+            };
             var res = await _requestApiService.GetFromJsonAsync<上市股票盤後當沖資訊回傳結果>(ConstHttpClinetName.TWSE, ConstRoute.上市股票盤後當沖資訊, parms);
             string[][]? datas = res.tables[1].data;
             ArgumentNullException.ThrowIfNull(datas);
@@ -280,8 +286,10 @@ namespace StockWeb.Services.ServicesForControllers
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
         protected virtual async Task 更新上市股票盤後融資融券資訊(ConcurrentDictionary<int, StockDayInfo> concurrentDayInfos, DateOnly date)
         {
-            var parms = new Dictionary<string, string?>();
-            parms.Add("date", date.ToDateFormateForTse());
+            var parms = new Dictionary<string, string?>
+            {
+                { "date", date.ToDateFormateForTse() }
+            };
             var res = await _requestApiService.GetFromJsonAsync<上市股票盤後融資融券資訊回傳結果>(ConstHttpClinetName.TWSE, ConstRoute.上市股票盤後融資融券資訊, parms);
 
             string[][]? datas = res.tables[1].data;
@@ -305,8 +313,10 @@ namespace StockWeb.Services.ServicesForControllers
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
         protected virtual async Task 更新上市股票盤後借券資訊(ConcurrentDictionary<int, StockDayInfo> concurrentDayInfos, DateOnly date)
         {
-            var parms = new Dictionary<string, string?>();
-            parms.Add("date", date.ToDateFormateForTse());
+            var parms = new Dictionary<string, string?>
+            {
+                { "date", date.ToDateFormateForTse() }
+            };
             var res = await _requestApiService.GetFromJsonAsync<上市股票盤後借券資訊回傳結果>(ConstHttpClinetName.TWSE, ConstRoute.上市股票盤後借券資訊, parms);
             string[][]? datas = res.data;
             ArgumentNullException.ThrowIfNull(datas);
@@ -326,8 +336,10 @@ namespace StockWeb.Services.ServicesForControllers
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
         protected virtual async Task 更新上市股票盤後外資資訊(ConcurrentDictionary<int, StockDayInfo> concurrentDayInfos, DateOnly date)
         {
-            var parms = new Dictionary<string, string?>();
-            parms.Add("date", date.ToDateFormateForTse());
+            var parms = new Dictionary<string, string?>
+            {
+                { "date", date.ToDateFormateForTse() }
+            };
             var res = await _requestApiService.GetFromJsonAsync<上市股票盤後外資資訊回傳結果>(ConstHttpClinetName.TWSE, ConstRoute.上市股票盤後外資資訊, parms);
             string[][]? datas = res.data;
             ArgumentNullException.ThrowIfNull(datas);
@@ -346,8 +358,10 @@ namespace StockWeb.Services.ServicesForControllers
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
         protected virtual async Task 更新上市股票盤後投信資訊(ConcurrentDictionary<int, StockDayInfo> concurrentDayInfos, DateOnly date)
         {
-            var parms = new Dictionary<string, string?>();
-            parms.Add("date", date.ToDateFormateForTse());
+            var parms = new Dictionary<string, string?>
+            {
+                { "date", date.ToDateFormateForTse() }
+            };
             var res = await _requestApiService.GetFromJsonAsync<上市股票盤後投信資訊回傳結果>(ConstHttpClinetName.TWSE, ConstRoute.上市股票盤後投信資訊, parms);
             string[][]? datas = res.data;
             ArgumentNullException.ThrowIfNull(datas);
@@ -366,8 +380,10 @@ namespace StockWeb.Services.ServicesForControllers
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
         protected virtual async Task 更新上櫃股票盤後基本資訊(ConcurrentDictionary<int, StockDayInfo> concurrentDayInfos, DateOnly date, Dictionary<int, StockBaseInfo> baseInfos)
         {
-            var parms = new Dictionary<string, string?>();
-            parms.Add("d", date.ToDateFormateForOtc());
+            var parms = new Dictionary<string, string?>
+            {
+                { "d", date.ToDateFormateForOtc() }
+            };
             var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後基本資訊回傳結果>(ConstHttpClinetName.TPEX, ConstRoute.上櫃股票盤後基本資訊, parms);
             string[][]? datas = res.aaData;
             ArgumentNullException.ThrowIfNull(datas);
@@ -396,8 +412,10 @@ namespace StockWeb.Services.ServicesForControllers
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
         protected virtual async Task 更新上櫃股票盤後當沖資訊(ConcurrentDictionary<int, StockDayInfo> concurrentDayInfos, DateOnly date)
         {
-            var parms = new Dictionary<string, string?>();
-            parms.Add("d", date.ToDateFormateForOtc());
+            var parms = new Dictionary<string, string?>
+            {
+                { "d", date.ToDateFormateForOtc() }
+            };
             var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後當沖資訊回傳結果>(ConstHttpClinetName.TPEX, ConstRoute.上櫃股票盤後當沖資訊, parms);
             string[][]? datas = res.aaData;
             ArgumentNullException.ThrowIfNull(datas);
@@ -415,8 +433,10 @@ namespace StockWeb.Services.ServicesForControllers
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
         protected virtual async Task 更新上櫃股票盤後融資融券資訊(ConcurrentDictionary<int, StockDayInfo> concurrentDayInfos, DateOnly date)
         {
-            var parms = new Dictionary<string, string?>();
-            parms.Add("d", date.ToDateFormateForOtc());
+            var parms = new Dictionary<string, string?>
+            {
+                { "d", date.ToDateFormateForOtc() }
+            };
             var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後融資融券資訊回傳結果>(ConstHttpClinetName.TPEX, ConstRoute.上櫃股票盤後融資融券資訊, parms);
             string[][]? datas = res.aaData;
             ArgumentNullException.ThrowIfNull(datas);
@@ -440,8 +460,10 @@ namespace StockWeb.Services.ServicesForControllers
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
         protected virtual async Task 更新上櫃股票盤後借券資訊(ConcurrentDictionary<int, StockDayInfo> concurrentDayInfos, DateOnly date)
         {
-            var parms = new Dictionary<string, string?>();
-            parms.Add("d", date.ToDateFormateForOtc());
+            var parms = new Dictionary<string, string?>
+            {
+                { "d", date.ToDateFormateForOtc() }
+            };
             var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後借券資訊回傳結果>(ConstHttpClinetName.TPEX, ConstRoute.上櫃股票盤後借券資訊, parms);
             string[][]? datas = res.aaData;
             ArgumentNullException.ThrowIfNull(datas);
@@ -461,8 +483,10 @@ namespace StockWeb.Services.ServicesForControllers
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
         protected virtual async Task 更新上櫃股票盤後外資淨買超資訊(ConcurrentDictionary<int, StockDayInfo> concurrentDayInfos, DateOnly date)
         {
-            var parms = new Dictionary<string, string?>();
-            parms.Add("d", date.ToDateFormateForOtc());
+            var parms = new Dictionary<string, string?>
+            {
+                { "d", date.ToDateFormateForOtc() }
+            };
             var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後外資淨買超資訊回傳結果>(ConstHttpClinetName.TPEX, ConstRoute.上櫃股票盤後外資淨買超資訊, parms);
             string[][]? datas = res.aaData;
             ArgumentNullException.ThrowIfNull(datas);
@@ -481,8 +505,10 @@ namespace StockWeb.Services.ServicesForControllers
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
         protected virtual async Task 更新上櫃股票盤後外資淨賣超資訊(ConcurrentDictionary<int, StockDayInfo> concurrentDayInfos, DateOnly date)
         {
-            var parms = new Dictionary<string, string?>();
-            parms.Add("d", date.ToDateFormateForOtc());
+            var parms = new Dictionary<string, string?>
+            {
+                { "d", date.ToDateFormateForOtc() }
+            };
             var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後外資淨賣超資訊回傳結果>(ConstHttpClinetName.TPEX, ConstRoute.上櫃股票盤後外資淨賣超資訊, parms);
             string[][]? datas = res.aaData;
             ArgumentNullException.ThrowIfNull(datas);
@@ -501,8 +527,10 @@ namespace StockWeb.Services.ServicesForControllers
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
         protected virtual async Task 更新上櫃股票盤後投信淨買超資訊(ConcurrentDictionary<int, StockDayInfo> concurrentDayInfos, DateOnly date)
         {
-            var parms = new Dictionary<string, string?>();
-            parms.Add("d", date.ToDateFormateForOtc());
+            var parms = new Dictionary<string, string?>
+            {
+                { "d", date.ToDateFormateForOtc() }
+            };
             var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後投信淨買超資訊回傳結果>(ConstHttpClinetName.TPEX, ConstRoute.上櫃股票盤後投信淨買超資訊, parms);
             string[][]? datas = res.aaData;
             ArgumentNullException.ThrowIfNull(datas);
@@ -521,8 +549,10 @@ namespace StockWeb.Services.ServicesForControllers
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
         protected virtual async Task 更新上櫃股票盤後投信淨賣超資訊(ConcurrentDictionary<int, StockDayInfo> concurrentDayInfos, DateOnly date)
         {
-            var parms = new Dictionary<string, string?>();
-            parms.Add("d", date.ToDateFormateForOtc());
+            var parms = new Dictionary<string, string?>
+            {
+                { "d", date.ToDateFormateForOtc() }
+            };
             var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後投信淨賣超資訊回傳結果>(ConstHttpClinetName.TPEX, ConstRoute.上櫃股票盤後投信淨賣超資訊, parms);
             string[][]? datas = res.aaData;
             ArgumentNullException.ThrowIfNull(datas);
@@ -634,8 +664,10 @@ namespace StockWeb.Services.ServicesForControllers
         protected virtual async Task<List<MarketDayInfo>> 更新上市大盤盤後資訊_以月為單位(DateOnly date)
         {
             await _db.MarketDayInfos.Where(m => m.Date.Year == date.Year && m.Date.Month == date.Month).ExecuteDeleteAsync();
-            var parms = new Dictionary<string, string?>();
-            parms.Add("date", date.ToDateFormateForTse());
+            var parms = new Dictionary<string, string?>
+            {
+                { "date", date.ToDateFormateForTse() }
+            };
             var res = await _requestApiService.GetFromJsonAsync<上市大盤成交資訊回傳結果>(ConstHttpClinetName.TWSE, ConstRoute.上市大盤成交資訊, parms);
 
             List<MarketDayInfo> marketDayInfos = res.ToMarketDayInfo();
@@ -689,7 +721,7 @@ namespace StockWeb.Services.ServicesForControllers
             DateOnly dateUpperLimit=date.AddDays(-40);
             var q = await _db.Database.SqlQuery<Strategy1ViewModel>($"exec Strategy1 @date={date},@dateUpperLimit={dateUpperLimit} ").ToListAsync();
             //return q.OrderByDescending(x=>x.BuyRate).ToList();
-            return q.ToList();
+            return q;
 
         }
         #endregion

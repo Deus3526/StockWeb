@@ -7,14 +7,11 @@ using System.Text;
 
 namespace StockWeb.Services
 {
-    public class JwtService
+    public class JwtService(JwtSettings jwtSettings)
     {
-        private readonly JwtSettings _jwtSettings;
-        private readonly ConcurrentDictionary<string, RefreshToken> _refreshTokens = new ConcurrentDictionary<string, RefreshToken>();
-        public JwtService(JwtSettings jwtSettings)
-        {
-            _jwtSettings = jwtSettings;
-        }
+        private readonly JwtSettings _jwtSettings = jwtSettings;
+        private readonly ConcurrentDictionary<string, RefreshToken> _refreshTokens = new();
+
         public string GenerateToken(string userId)
         {
             var tokenHandler = new JwtSecurityTokenHandler();

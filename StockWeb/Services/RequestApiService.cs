@@ -5,15 +5,10 @@ using StockWeb.Models.ApiResponseModel;
 
 namespace StockWeb.Services
 {
-    public class RequestApiService
+    public class RequestApiService(IHttpClientFactory httpClientFactory, IConfiguration config)
     {
-        private readonly IHttpClientFactory _httpClientFactory;
-        private readonly IConfiguration _config;
-        public RequestApiService(IHttpClientFactory httpClientFactory, IConfiguration config)
-        {
-            _httpClientFactory = httpClientFactory;
-            _config = config;
-        }
+        private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
+        private readonly IConfiguration _config = config;
 
         public async Task<T> GetFromJsonAsync<T>(string httpClientName, string routeName, IDictionary<string, string?>? queryParams=null,string? httpLogMessage=null)
         {
@@ -24,7 +19,7 @@ namespace StockWeb.Services
             if(queryParams!=null)route = QueryHelpers.AddQueryString(route, queryParams);
 
             //var res = await client.GetFromJsonAsync<T>(route);
-            HttpRequestMessage requestMessage=new HttpRequestMessage(HttpMethod.Get, route);
+            HttpRequestMessage requestMessage=new(HttpMethod.Get, route);
             requestMessage.Options.Set(new HttpRequestOptionsKey<string?>(ConstString.HttpLogMessage), httpLogMessage);
             var response=await client.SendAsync(requestMessage);
             var res=await response.Content.ReadFromJsonAsync<T>();

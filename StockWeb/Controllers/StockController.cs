@@ -18,15 +18,10 @@ namespace StockWeb.Controllers
     [ApiController]
     [ApiExplorerSettings(GroupName = nameof(ApiGroups.Stock))]
     [Tags(Tags.股票相關)]
-    public class StockController : ControllerBase
+    public class StockController(StockService stockService) : ControllerBase
     {
-        private readonly StockContext _db;
-        private readonly StockService _stockService;
-        public StockController(StockContext db,StockService stockService) 
-        {
-            _db= db;
-            _stockService=stockService;
-        }
+        private readonly StockService _stockService = stockService;
+
         /// <summary>
         /// 更新DB上市櫃股票基本資訊
         /// </summary>

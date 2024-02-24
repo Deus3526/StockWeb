@@ -46,7 +46,7 @@ namespace StockWeb.StartUpConfigure
                         new[] { TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(3) },
                         onRetry: (outcome, timespan, retryAttempt, context) =>
                         {
-                            logger.LogWarning($"請求{request.RequestUri}失敗，{timespan}秒後重試第{retryAttempt}次");
+                            logger.LogWarning("請求{request.RequestUri}失敗，{timespan}秒後重試第{retryAttempt}次",request.RequestUri,timespan,retryAttempt);
                         });
 
 
@@ -58,13 +58,10 @@ namespace StockWeb.StartUpConfigure
     }
 
 
-    public class LoggingDelegatingHandler : DelegatingHandler
+    public class LoggingDelegatingHandler(ILogger<LoggingDelegatingHandler> logger) : DelegatingHandler
     {
-        private readonly ILogger<LoggingDelegatingHandler> _logger;
-        public LoggingDelegatingHandler(ILogger<LoggingDelegatingHandler> logger)
-        {
-            _logger = logger;
-        }
+        private readonly ILogger<LoggingDelegatingHandler> _logger = logger;
+
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             // 日誌記錄請求  httpClient其實自己會寫log(System.Net.Http的information)，如果需要額外寫到檔案紀錄的話，才需要使用自訂的Handler
@@ -83,14 +80,14 @@ namespace StockWeb.StartUpConfigure
         {
             request.Options.TryGetValue(new HttpRequestOptionsKey<string?>(ConstString.HttpLogMessage),out string? messageForLog);
             // 实现请求日志逻辑
-            if(messageForLog!=null) _logger.LogInformation($"Sending request to {messageForLog} : {request.RequestUri}");
-            else _logger.LogInformation($"發送請求至 : {request.RequestUri}");
+            if(messageForLog!=null) _logger.LogInformation("Sending request to {messageForLog} : {request.RequestUri}",messageForLog,request.RequestUri);
+            else _logger.LogInformation("發送請求至 : {request.RequestUri}",request.RequestUri);
         }
 
         private void LogResponse(HttpRequestMessage request,HttpResponseMessage response)
         {
             // 实现响应日志逻辑
-            _logger.LogInformation($"接受到來自 {request.RequestUri} 的回應 with status code {response.StatusCode}");
+            _logger.LogInformation("接受到來自 {request.RequestUri} 的回應 with status code {response.StatusCode}",request.RequestUri,response.StatusCode);
         }
     }
 }

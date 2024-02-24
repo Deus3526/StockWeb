@@ -39,27 +39,20 @@ namespace StockWeb.StartUpConfigure
             var _logger = (context.ServiceProvider.GetService(loggerType) as ILogger)!;
 
 
-            MethodName = MethodName ?? context.ImplementationMethod.Name;
-            ErrorMessage = ErrorMessage ?? $"{MethodName} : 發生錯誤";
+            MethodName ??= context.ImplementationMethod.Name;
+            ErrorMessage ??= $"{MethodName} : 發生錯誤";
             try
             {
-                _logger.LogInformation($"{MethodName} : 開始");
+                _logger.LogInformation("{MethodName} : 開始",MethodName);
                 await next(context); // 调用原始方法
-                _logger.LogInformation($"{MethodName} : 結束");
+                _logger.LogInformation("{MethodName} : 結束",MethodName);
             }
 
             catch (Exception ex)
             {
-                _logger.LogError(ErrorMessage);
-                if (ex is CustomErrorResponseException || _env.IsDevelopment())
-                {
-                    ExceptionDispatchInfo.Capture(ex).Throw(); //// 重新拋出原始異常並保留堆棧跟踪給後續的錯誤處理Middleware
-                }
-                else
-                {
-                    _logger.LogError($"Error:{{@ExceptionInfo}}-{{@{nameof(LogTypeEnum)}}}", ex, LogTypeEnum.Error);
-                    throw new CustomErrorResponseException(ErrorMessage, StatusCode); //正式環境回傳固定格式的訊息就好
-                }
+                _logger.LogError("{ ErrorMessage}",ErrorMessage);
+                _logger.LogError($"Error:{{@ExceptionInfo}}-{{@{nameof(LogTypeEnum)}}}", ex, LogTypeEnum.Error);
+                throw new CustomErrorResponseException(ErrorMessage, StatusCode); 
             }
         }
     }
