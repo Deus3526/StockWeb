@@ -1,4 +1,6 @@
-﻿using Microsoft.IdentityModel.Tokens;
+﻿using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
+using StockWeb.StartUpConfigure;
 using System.Collections.Concurrent;
 using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
@@ -7,9 +9,9 @@ using System.Text;
 
 namespace StockWeb.Services
 {
-    public class JwtService(JwtSettings jwtSettings)
+    public class JwtService(IOptions<JwtSettings> jwtSettings)
     {
-        private readonly JwtSettings _jwtSettings = jwtSettings;
+        private readonly JwtSettings _jwtSettings = jwtSettings.Value;
         private readonly ConcurrentDictionary<string, RefreshToken> _refreshTokens = new();
 
         public string GenerateToken(string userId)
@@ -58,13 +60,6 @@ namespace StockWeb.Services
             return true;
         }
 
-    }
-    public class JwtSettings
-    {
-        public required  string Key { get; set; }
-        public required  string Issuer { get; set; }
-        public int ExpiredTime { get; set; }
-        public  int RefreshTokenExpiredTime { get; set; }
     }
     public class RefreshToken
     {

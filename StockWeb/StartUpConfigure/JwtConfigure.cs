@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using StockWeb.Services;
@@ -14,15 +15,16 @@ namespace StockWeb.StartUpConfigure
         /// <param name="builder"></param>
         public static void JwtConfigure(this WebApplicationBuilder builder)
         {
-            builder.Services.AddSingleton<JwtSettings>(ServiceProvider =>
-            {
-                JwtSettings jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()!;
-                return jwtSettings;
-            });
+            //builder.Services.AddSingleton<JwtSettings>(ServiceProvider =>
+            //{
+            //    JwtSettings jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()!;
+            //    return jwtSettings;
+            //});
             //這邊使用AddOptions來設定JwtBearerOptions，簡易版的可以直接在AddJwtBearer()裡面設定，但是因為我這邊想要注入前面註冊的JwtSettings，所以要使用AddOptions的寫法，才能拿到JwtSettings
             builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
-                .Configure<JwtSettings>((options, jwtSettings) =>
+                .Configure<IOptions<JwtSettings>>((options, jwtSettingsOptions) =>
                 {
+                    JwtSettings jwtSettings=jwtSettingsOptions.Value;
                     options.RequireHttpsMetadata = true;
                     options.SaveToken = true;
                     options.TokenValidationParameters = new TokenValidationParameters

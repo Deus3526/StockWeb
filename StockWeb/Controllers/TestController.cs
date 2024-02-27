@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using StockWeb.DbModels;
 using StockWeb.StartUpConfigure;
 using StockWeb.StartUpConfigure.Middleware;
@@ -15,9 +16,11 @@ namespace StockWeb.Controllers
     public class TestController : ControllerBase
     {
         private readonly StockContext _db;
-        public TestController(StockContext db)
+        private readonly StockSource _source;
+        public TestController(StockContext db, IOptions<StockSource> source)
         {
             _db = db;
+            _source = source.Value;
         }
 
         [HttpPost]
@@ -34,7 +37,6 @@ namespace StockWeb.Controllers
             var q = _db.StockBaseInfos.First();
             return q;
         }
-
 
         [AllowAnonymous]
         [HttpGet]

@@ -50,8 +50,7 @@ namespace StockWeb.StartUpConfigure
 
             catch (Exception ex)
             {
-                _logger.LogError("{ ErrorMessage}",ErrorMessage);
-                _logger.LogError($"Error:{{@ExceptionInfo}}-{{@{nameof(LogTypeEnum)}}}", ex, LogTypeEnum.Error);
+                _logger.LogError($"Error:{{@ErrorMessage}}-{{@ExceptionInfo}}-{{@{nameof(LogTypeEnum)}}}", ErrorMessage,ex, LogTypeEnum.Error);
                 throw new CustomErrorResponseException(ErrorMessage, StatusCode); 
             }
         }

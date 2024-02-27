@@ -13,15 +13,18 @@ using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using StockWeb.Models.ViewModels;
+using Microsoft.Extensions.Options;
+using System.Diagnostics;
+using EFCore.BulkExtensions;
 
 namespace StockWeb.Services.ServicesForControllers
 {
-    public class StockService(StockContext db, ILogger<StockService> logger, RequestApiService requestApiService)
+    public class StockService(StockContext db, ILogger<StockService> logger, RequestApiService requestApiService,IOptions<StockSource> stockSource)
     {
         private readonly StockContext _db = db;
         private readonly RequestApiService _requestApiService = requestApiService;
         private readonly ILogger<StockService> _logger = logger;
-
+        private readonly StockSource _stockSource=stockSource.Value;
         /// <summary>
         /// 因為刪除資料跟更新上市與上櫃資料的時候可能都會用到DbContext，這樣同一個實例的DbContext會打架，要馬用非同步鎖鎖住，要馬注入ServiceScopeFactory來CeateScope取得新的DbContext
         /// </summary>
@@ -65,7 +68,7 @@ namespace StockWeb.Services.ServicesForControllers
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
         protected virtual async Task 更新上市股票基本訊息_計算流通張數(ConcurrentDictionary<int, StockBaseInfo> concurrentBaseInfos)
         {
-            var res = await _requestApiService.GetFromJsonAsync<List<上市股票基本資訊>>(ConstHttpClinetName.openapiTwse, ConstRoute.上市股票基本訊息_計算流通張數);
+            var res = await _requestApiService.GetFromJsonAsync<List<上市股票基本資訊>>(nameof(_stockSource.OpenapiTwse),_stockSource.OpenapiTwse.Route.上市股票基本訊息_計算流通張數);
             foreach (上市股票基本資訊 s in res)
             {
                 ArgumentNullException.ThrowIfNull(s.公司代號);
@@ -92,7 +95,7 @@ namespace StockWeb.Services.ServicesForControllers
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
         protected virtual async Task 更新上櫃股票基本訊息_發行股數(ConcurrentDictionary<int, StockBaseInfo> concurrentBaseInfos)
         {
-            var res = await _requestApiService.GetFromJsonAsync<上櫃股票基本資訊_發行股數回傳結果>(ConstHttpClinetName.TPEX, ConstRoute.上櫃股票基本訊息_發行股數);
+            var res = await _requestApiService.GetFromJsonAsync<上櫃股票基本資訊_發行股數回傳結果>(nameof(_stockSource.Tpex),_stockSource.Tpex.Route.上櫃股票基本訊息_發行股數);
             res.轉換為上櫃股票基本資訊_流通股數(concurrentBaseInfos);
             return;
         }
@@ -157,9 +160,19 @@ namespace StockWeb.Services.ServicesForControllers
                 //但是如果是減資之類的停止交易的狀況 或是 未上市或已下市，不會有資料，此時收盤價會是0，不視為交易日
                 if (kvp.Value.收盤價 == 0) concurrentDayInfos.Remove(kvp.Key,out StockDayInfo? dayInfo);
             }
-            _db.StockDayInfos.AddRange(concurrentDayInfos.Values);
-            await _db.SaveChangesAsync();
+            // 啟動計時器
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            using var transaction=await _db.Database.BeginTransactionAsync();
+            //_db.StockDayInfos.AddRange(concurrentDayInfos.Values);
+            //await _db.SaveChangesAsync(); //3293毫秒
+            await _db.BulkInsertAsync(concurrentDayInfos.Values); //237毫秒
+            // 停止計時器
+            stopwatch.Stop();
+            Console.WriteLine($"插入資料耗費 : {stopwatch.ElapsedMilliseconds} 毫秒");
             await UpdateMovingAverage(date);
+            await transaction.CommitAsync();
+            
+
             return;
         }
         /// <summary>
@@ -236,7 +249,7 @@ namespace StockWeb.Services.ServicesForControllers
             {
                 { "date", date.ToDateFormateForTse() }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上市股票盤後基本資訊回傳結果>(ConstHttpClinetName.TWSE, ConstRoute.上市股票盤後基本資訊, parms, "更新上市股票盤後基本資訊");
+            var res = await _requestApiService.GetFromJsonAsync<上市股票盤後基本資訊回傳結果>(nameof(_stockSource.Twse),_stockSource.Twse.Route.上市股票盤後基本資訊, parms, "更新上市股票盤後基本資訊");
             string[][]? datas = res.tables[8].data;
             ArgumentNullException.ThrowIfNull(datas);
             foreach (var row in datas)
@@ -269,7 +282,7 @@ namespace StockWeb.Services.ServicesForControllers
             {
                 { "date", date.ToDateFormateForTse() }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上市股票盤後當沖資訊回傳結果>(ConstHttpClinetName.TWSE, ConstRoute.上市股票盤後當沖資訊, parms);
+            var res = await _requestApiService.GetFromJsonAsync<上市股票盤後當沖資訊回傳結果>(nameof(_stockSource.Twse),_stockSource.Twse.Route.上市股票盤後當沖資訊, parms);
             string[][]? datas = res.tables[1].data;
             ArgumentNullException.ThrowIfNull(datas);
             foreach (var row in datas)
@@ -290,7 +303,7 @@ namespace StockWeb.Services.ServicesForControllers
             {
                 { "date", date.ToDateFormateForTse() }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上市股票盤後融資融券資訊回傳結果>(ConstHttpClinetName.TWSE, ConstRoute.上市股票盤後融資融券資訊, parms);
+            var res = await _requestApiService.GetFromJsonAsync<上市股票盤後融資融券資訊回傳結果>(nameof(_stockSource.Twse),_stockSource.Twse.Route.上市股票盤後融資融券資訊 , parms);
 
             string[][]? datas = res.tables[1].data;
             ArgumentNullException.ThrowIfNull(datas);
@@ -317,7 +330,7 @@ namespace StockWeb.Services.ServicesForControllers
             {
                 { "date", date.ToDateFormateForTse() }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上市股票盤後借券資訊回傳結果>(ConstHttpClinetName.TWSE, ConstRoute.上市股票盤後借券資訊, parms);
+            var res = await _requestApiService.GetFromJsonAsync<上市股票盤後借券資訊回傳結果>(nameof(_stockSource.Twse),_stockSource.Twse.Route.上市股票盤後借券資訊, parms);
             string[][]? datas = res.data;
             ArgumentNullException.ThrowIfNull(datas);
             foreach (var row in datas)
@@ -340,7 +353,7 @@ namespace StockWeb.Services.ServicesForControllers
             {
                 { "date", date.ToDateFormateForTse() }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上市股票盤後外資資訊回傳結果>(ConstHttpClinetName.TWSE, ConstRoute.上市股票盤後外資資訊, parms);
+            var res = await _requestApiService.GetFromJsonAsync<上市股票盤後外資資訊回傳結果>(nameof(_stockSource.Twse),_stockSource.Twse.Route.上市股票盤後外資資訊 , parms);
             string[][]? datas = res.data;
             ArgumentNullException.ThrowIfNull(datas);
             foreach (var row in datas)
@@ -362,7 +375,7 @@ namespace StockWeb.Services.ServicesForControllers
             {
                 { "date", date.ToDateFormateForTse() }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上市股票盤後投信資訊回傳結果>(ConstHttpClinetName.TWSE, ConstRoute.上市股票盤後投信資訊, parms);
+            var res = await _requestApiService.GetFromJsonAsync<上市股票盤後投信資訊回傳結果>(nameof(_stockSource.Twse),_stockSource.Twse.Route.上市股票盤後投信資訊, parms);
             string[][]? datas = res.data;
             ArgumentNullException.ThrowIfNull(datas);
             foreach (var row in datas)
@@ -384,7 +397,7 @@ namespace StockWeb.Services.ServicesForControllers
             {
                 { "d", date.ToDateFormateForOtc() }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後基本資訊回傳結果>(ConstHttpClinetName.TPEX, ConstRoute.上櫃股票盤後基本資訊, parms);
+            var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後基本資訊回傳結果>(nameof(_stockSource.Tpex),_stockSource.Tpex.Route.上櫃股票盤後基本資訊, parms);
             string[][]? datas = res.aaData;
             ArgumentNullException.ThrowIfNull(datas);
             foreach (var row in datas)
@@ -416,7 +429,7 @@ namespace StockWeb.Services.ServicesForControllers
             {
                 { "d", date.ToDateFormateForOtc() }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後當沖資訊回傳結果>(ConstHttpClinetName.TPEX, ConstRoute.上櫃股票盤後當沖資訊, parms);
+            var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後當沖資訊回傳結果>(nameof(_stockSource.Tpex),_stockSource.Tpex.Route.上櫃股票盤後當沖資訊, parms);
             string[][]? datas = res.aaData;
             ArgumentNullException.ThrowIfNull(datas);
             foreach (var row in datas)
@@ -437,7 +450,7 @@ namespace StockWeb.Services.ServicesForControllers
             {
                 { "d", date.ToDateFormateForOtc() }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後融資融券資訊回傳結果>(ConstHttpClinetName.TPEX, ConstRoute.上櫃股票盤後融資融券資訊, parms);
+            var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後融資融券資訊回傳結果>(nameof(_stockSource.Tpex),_stockSource.Tpex.Route.上櫃股票盤後融資融券資訊, parms);
             string[][]? datas = res.aaData;
             ArgumentNullException.ThrowIfNull(datas);
             foreach (var row in datas)
@@ -464,7 +477,7 @@ namespace StockWeb.Services.ServicesForControllers
             {
                 { "d", date.ToDateFormateForOtc() }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後借券資訊回傳結果>(ConstHttpClinetName.TPEX, ConstRoute.上櫃股票盤後借券資訊, parms);
+            var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後借券資訊回傳結果>(nameof(_stockSource.Tpex),_stockSource.Tpex.Route.上櫃股票盤後借券資訊 , parms);
             string[][]? datas = res.aaData;
             ArgumentNullException.ThrowIfNull(datas);
             foreach (var row in datas)
@@ -487,7 +500,7 @@ namespace StockWeb.Services.ServicesForControllers
             {
                 { "d", date.ToDateFormateForOtc() }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後外資淨買超資訊回傳結果>(ConstHttpClinetName.TPEX, ConstRoute.上櫃股票盤後外資淨買超資訊, parms);
+            var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後外資淨買超資訊回傳結果>(nameof(_stockSource.Tpex),_stockSource.Tpex.Route.上櫃股票盤後外資淨買超資訊 , parms);
             string[][]? datas = res.aaData;
             ArgumentNullException.ThrowIfNull(datas);
             foreach (var row in datas)
@@ -509,7 +522,7 @@ namespace StockWeb.Services.ServicesForControllers
             {
                 { "d", date.ToDateFormateForOtc() }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後外資淨賣超資訊回傳結果>(ConstHttpClinetName.TPEX, ConstRoute.上櫃股票盤後外資淨賣超資訊, parms);
+            var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後外資淨賣超資訊回傳結果>(nameof(_stockSource.Tpex),_stockSource.Tpex.Route.上櫃股票盤後外資淨賣超資訊, parms);
             string[][]? datas = res.aaData;
             ArgumentNullException.ThrowIfNull(datas);
             foreach (var row in datas)
@@ -531,7 +544,7 @@ namespace StockWeb.Services.ServicesForControllers
             {
                 { "d", date.ToDateFormateForOtc() }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後投信淨買超資訊回傳結果>(ConstHttpClinetName.TPEX, ConstRoute.上櫃股票盤後投信淨買超資訊, parms);
+            var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後投信淨買超資訊回傳結果>(nameof(_stockSource.Tpex),_stockSource.Tpex.Route.上櫃股票盤後投信淨買超資訊, parms);
             string[][]? datas = res.aaData;
             ArgumentNullException.ThrowIfNull(datas);
             foreach (var row in datas)
@@ -553,7 +566,7 @@ namespace StockWeb.Services.ServicesForControllers
             {
                 { "d", date.ToDateFormateForOtc() }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後投信淨賣超資訊回傳結果>(ConstHttpClinetName.TPEX, ConstRoute.上櫃股票盤後投信淨賣超資訊, parms);
+            var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後投信淨賣超資訊回傳結果>(nameof(_stockSource.Tpex),_stockSource.Tpex.Route.上櫃股票盤後投信淨賣超資訊, parms);
             string[][]? datas = res.aaData;
             ArgumentNullException.ThrowIfNull(datas);
             foreach (var row in datas)
@@ -668,7 +681,7 @@ namespace StockWeb.Services.ServicesForControllers
             {
                 { "date", date.ToDateFormateForTse() }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上市大盤成交資訊回傳結果>(ConstHttpClinetName.TWSE, ConstRoute.上市大盤成交資訊, parms);
+            var res = await _requestApiService.GetFromJsonAsync<上市大盤成交資訊回傳結果>(nameof(_stockSource.Twse),_stockSource.Twse.Route.上市大盤成交資訊,parms);
 
             List<MarketDayInfo> marketDayInfos = res.ToMarketDayInfo();
             _db.MarketDayInfos.AddRange(marketDayInfos);

@@ -10,12 +10,11 @@ namespace StockWeb.Services
         private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
         private readonly IConfiguration _config = config;
 
-        public async Task<T> GetFromJsonAsync<T>(string httpClientName, string routeName, IDictionary<string, string?>? queryParams=null,string? httpLogMessage=null)
+        public async Task<T> GetFromJsonAsync<T>(string httpClientName, string route, IDictionary<string, string?>? queryParams=null,string? httpLogMessage=null)
         {
             ArgumentNullException.ThrowIfNullOrEmpty(httpClientName);
-            ArgumentNullException.ThrowIfNullOrEmpty(routeName);
+            ArgumentNullException.ThrowIfNullOrEmpty(route);
             HttpClient client = _httpClientFactory.CreateClient(httpClientName);
-            string route = _config[$"{httpClientName}:{ConstString.Route}:{routeName}"]!;
             if(queryParams!=null)route = QueryHelpers.AddQueryString(route, queryParams);
 
             //var res = await client.GetFromJsonAsync<T>(route);
