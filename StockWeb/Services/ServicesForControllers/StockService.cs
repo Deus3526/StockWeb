@@ -169,7 +169,10 @@ namespace StockWeb.Services.ServicesForControllers
             // 停止計時器
             stopwatch.Stop();
             Console.WriteLine($"插入資料耗費 : {stopwatch.ElapsedMilliseconds} 毫秒");
+            stopwatch.Restart();
             await UpdateMovingAverage(date);
+            stopwatch.Stop();
+            Console.WriteLine($"更新日線資料耗費 : {stopwatch.ElapsedMilliseconds} 毫秒");
             await transaction.CommitAsync();
             
 
