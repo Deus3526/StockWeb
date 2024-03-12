@@ -51,7 +51,7 @@ namespace StockWeb.StartUpConfigure
         [Required, ValidateObjectMembers]
         public required TwseContent Twse { get; init; }
         [Required,ValidateObjectMembers]
-        public required openapiTwseContent OpenapiTwse { get; init; }
+        public required OpenapiTwseContent OpenapiTwse { get; init; }
         [Required,ValidateObjectMembers]
         public required TpexContent Tpex { get; init; }
 
@@ -83,7 +83,7 @@ namespace StockWeb.StartUpConfigure
                 public required string 上市大盤成交資訊 { get; init; }
             }
         }
-        public record openapiTwseContent
+        public record OpenapiTwseContent
         {
             [Required]
             public required string BaseAddress { get; init; }

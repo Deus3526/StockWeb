@@ -45,7 +45,7 @@
       "上市大盤成交資訊": "rwd/zh/afterTrading/FMTQIK?response=json"
     }
   },
-  "openapiTwse": {
+  "OpenapiTwse": {
     "BaseAddress": "https://openapi.twse.com.tw/",
     "Route": {
       "上市股票基本訊息_計算流通張數": "v1/opendata/t187ap03_L"

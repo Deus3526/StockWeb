@@ -105,6 +105,13 @@
             </summary>
             <example>false</example>
         </member>
+        <member name="M:StockWeb.Program.CreateSystemLogger">
+            <summary>
+            在主要log建立之前，先配置的一個簡單系統log，用於記錄系統的開啟關閉事件。
+            如果使用網路上的Log.Logger寫法而不是var systemLogger，則全局的Log.Logger會在UseSeriLog的時候被替換掉，故這邊使用局部的logger
+            </summary>
+            <returns></returns>
+        </member>
         <member name="F:StockWeb.Services.ServicesForControllers.StockService._semaphoreSlimForDbContext">
             <summary>
             因為刪除資料跟更新上市與上櫃資料的時候可能都會用到DbContext，這樣同一個實例的DbContext會打架，要馬用非同步鎖鎖住，要馬注入ServiceScopeFactory來CeateScope取得新的DbContext
