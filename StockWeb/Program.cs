@@ -42,15 +42,12 @@ namespace StockWeb
             });
 
             builder.JwtConfigure();
-            builder.Services.AddDbContext<StockContext>(options =>
+            builder.Services.AddDbContext<StockContext>((serviceProvider,options) =>
             {
-                options.UseSqlServer(builder.Configuration.GetConnectionString("Stock"));
+                //options.UseSqlServer(builder.Configuration.GetConnectionString("Stock"));
+                var connectionStrings = serviceProvider.GetRequiredService<IOptions<ConnectionStrings>>().Value;
+                options.UseSqlServer(connectionStrings.Stock);
             });
-            builder.Services.AddDbContextFactory<StockContext>(options =>
-            {
-                options.UseSqlServer(builder.Configuration.GetConnectionString("Stock"));
-            });
- 
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddCors();

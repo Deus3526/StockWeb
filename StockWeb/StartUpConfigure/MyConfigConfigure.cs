@@ -20,6 +20,7 @@ namespace StockWeb.StartUpConfigure
             builder.Services.AddOptions<JwtSettings>().BindConfiguration(nameof(JwtSettings),binder=>binder.ErrorOnUnknownConfiguration=true).ValidateDataAnnotations().ValidateOnStart();
             builder.Services.AddOptions<LogPath>().BindConfiguration(nameof(LogPath), binder => binder.ErrorOnUnknownConfiguration = true).ValidateDataAnnotations().ValidateOnStart();
             builder.Services.AddOptions<StockSource>().BindConfiguration(nameof(StockSource), binder => binder.ErrorOnUnknownConfiguration = true).ValidateDataAnnotations().ValidateOnStart();
+            builder.Services.AddOptions<ConnectionStrings>().BindConfiguration(nameof(ConnectionStrings), binder => binder.ErrorOnUnknownConfiguration = true).ValidateDataAnnotations().ValidateOnStart();
         }
     }
 
@@ -132,6 +133,11 @@ namespace StockWeb.StartUpConfigure
         #endregion
     }
 
+    public record ConnectionStrings
+    {
+        [Required]
+        public required string Stock { get; init; }
+    }
 
 
 
