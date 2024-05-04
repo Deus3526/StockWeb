@@ -65,19 +65,5 @@ public partial class StockDayInfo
 
     public double 本益比 { get; set; }
 
-    public double? Ma5 { get; set; }
-
-    public double? Ma10 { get; set; }
-
-    public double? Ma20 { get; set; }
-
-    public double? Ma60 { get; set; }
-
-    public double? Ma120 { get; set; }
-
-    public double? Ma240 { get; set; }
-
-    public double? BollingTop { get; set; }
-
     public virtual StockBaseInfo Stock { get; set; } = null!;
 }

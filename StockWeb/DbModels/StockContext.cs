@@ -58,13 +58,6 @@ public partial class StockContext : DbContext
 
             entity.ToTable("StockDayInfo");
 
-            entity.Property(e => e.Ma10).HasColumnName("ma10");
-            entity.Property(e => e.Ma120).HasColumnName("ma120");
-            entity.Property(e => e.Ma20).HasColumnName("ma20");
-            entity.Property(e => e.Ma240).HasColumnName("ma240");
-            entity.Property(e => e.Ma5).HasColumnName("ma5");
-            entity.Property(e => e.Ma60).HasColumnName("ma60");
-
             entity.HasOne(d => d.Stock).WithMany(p => p.StockDayInfos)
                 .HasForeignKey(d => d.StockId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
