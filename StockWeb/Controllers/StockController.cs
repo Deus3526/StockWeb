@@ -46,6 +46,14 @@ namespace StockWeb.Controllers
             return NoContent();
         }
 
+        [HttpPost]
+        public async Task<ActionResult> UpdateDividendYield()
+        {
+            await _stockService.更新股票殖利率();
+            return NoContent();
+        }
+
+
         /// <summary>
         /// 20個交易日內，投信買超超過總張數1%
         /// </summary>

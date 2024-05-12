@@ -62,5 +62,10 @@ namespace StockWeb.Extensions
             DateOnly date = DateOnly.ParseExact(s, "yyy/MM/dd", culture);
             return date;
         }
+        public static DateOnly ToDateOnly2(this string s)
+        {
+            DateOnly date = DateOnly.ParseExact(s, "yyy年MM月dd日", culture);
+            return date;
+        }
     }
 }

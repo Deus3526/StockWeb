@@ -15,6 +15,8 @@ public partial class StockContext : DbContext
     {
     }
 
+    public virtual DbSet<DividendYield> DividendYields { get; set; }
+
     public virtual DbSet<MarketDayInfo> MarketDayInfos { get; set; }
 
     public virtual DbSet<StockBaseInfo> StockBaseInfos { get; set; }
@@ -25,10 +27,22 @@ public partial class StockContext : DbContext
 
 //    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 //#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-//        => optionsBuilder.UseSqlServer("Data Source=.,1434;User ID=sa;Password=deus.ko3526;Initial Catalog=Stock;TrustServerCertificate=true");
+//        => optionsBuilder.UseSqlServer("Data Source=.,1434;User ID=sa;Password=Test.123;Initial Catalog=Stock;TrustServerCertificate=true");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<DividendYield>(entity =>
+        {
+            entity.HasKey(e => new { e.StockId, e.PayDate });
+
+            entity.ToTable("DividendYield");
+
+            entity.HasOne(d => d.Stock).WithMany(p => p.DividendYields)
+                .HasForeignKey(d => d.StockId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_DividendYield_StockBaseInfo");
+        });
+
         modelBuilder.Entity<MarketDayInfo>(entity =>
         {
             entity.HasKey(e => e.Date);
@@ -57,6 +71,10 @@ public partial class StockContext : DbContext
             entity.HasKey(e => new { e.StockId, e.Date });
 
             entity.ToTable("StockDayInfo");
+
+            entity.HasIndex(e => new { e.Date, e.StockId }, "NonClusteredIndex-20240225-001850");
+
+            entity.Property(e => e.Date).HasComment("測試測試");
 
             entity.HasOne(d => d.Stock).WithMany(p => p.StockDayInfos)
                 .HasForeignKey(d => d.StockId)

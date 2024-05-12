@@ -61,7 +61,7 @@ namespace StockWeb.Models.ApiResponseModel
                     baseInfo = new StockBaseInfo();
                     baseInfo.StockId = stockId;
                     baseInfo.StockType = StockTypeEnum.otc;
-                    concurrentBaseInfos[stockId]=baseInfo;
+                    concurrentBaseInfos[stockId] = baseInfo;
                 }
                 baseInfo.StockName = s[2].Trim();
                 decimal 發行股數 = decimal.Parse(s[3]);
@@ -272,9 +272,9 @@ namespace StockWeb.Models.ApiResponseModel
                 MarketDayInfo marketDayInfo = new MarketDayInfo
                 {
                     Date = s[0].ToDateOnly(),
-                    成交張數 =Convert.ToInt32(decimal.Parse(s[1])/1000),
+                    成交張數 = Convert.ToInt32(decimal.Parse(s[1]) / 1000),
                     成交金額 = Convert.ToInt64(decimal.Parse(s[2])),
-                    成交筆數= Convert.ToInt32(decimal.Parse(s[3])),
+                    成交筆數 = Convert.ToInt32(decimal.Parse(s[3])),
                     大盤指數 = Convert.ToDouble(decimal.Parse(s[4])),
                     漲跌 = Convert.ToDouble(decimal.Parse(s[5])),
                 };
@@ -282,6 +282,19 @@ namespace StockWeb.Models.ApiResponseModel
             }
             return result;
         }
+    }
+
+    public class 上市股票殖利率回傳結果
+    {
+        public string? stat { get; set; }
+        public string? title { get; set; }
+        public string[]? fields { get; set; }
+        public required string[][] data { get; set; }
+        public object[]? extraNotes { get; set; }
+        public string[]? notes { get; set; }
+        public string[]? formula { get; set; }
+        public string? strDate { get; set; }
+        public string? endDate { get; set; }
     }
 
 

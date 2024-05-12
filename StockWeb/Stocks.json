@@ -9,7 +9,8 @@
         "上市股票盤後借券資訊": "zh/exchangeReport/TWT93U",
         "上市股票盤後外資資訊": "zh/fund/TWT43U",
         "上市股票盤後投信資訊": "zh/fund/TWT44U?response=json",
-        "上市大盤成交資訊": "rwd/zh/afterTrading/FMTQIK?response=json"
+        "上市大盤成交資訊": "rwd/zh/afterTrading/FMTQIK?response=json",
+        "上市股票殖利率資訊": "rwd/zh/exRight/TWT49U"
       }
     },
     "OpenapiTwse": {

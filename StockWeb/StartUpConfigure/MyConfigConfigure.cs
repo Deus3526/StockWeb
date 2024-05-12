@@ -81,6 +81,9 @@ namespace StockWeb.StartUpConfigure
                 public required string 上市股票盤後投信資訊 { get; init; }
                 [Required]
                 public required string 上市大盤成交資訊 { get; init; }
+
+                [Required]
+                public required string 上市股票殖利率資訊 { get; set; }
             }
         }
         public record OpenapiTwseContent

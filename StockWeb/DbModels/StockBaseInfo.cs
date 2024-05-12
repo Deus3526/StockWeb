@@ -15,5 +15,7 @@ public partial class StockBaseInfo
 
     public string? Category { get; set; }
 
+    public virtual ICollection<DividendYield> DividendYields { get; set; } = new List<DividendYield>();
+
     public virtual ICollection<StockDayInfo> StockDayInfos { get; set; } = new List<StockDayInfo>();
 }

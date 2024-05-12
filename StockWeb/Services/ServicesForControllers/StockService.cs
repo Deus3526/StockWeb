@@ -16,10 +16,12 @@ using StockWeb.Models.ViewModels;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
 using EFCore.BulkExtensions;
+using static StockWeb.Models.ApiResponseModel.上市股票盤後基本資訊回傳結果;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace StockWeb.Services.ServicesForControllers
 {
-    public class StockService(StockContext db, ILogger<StockService> logger, RequestApiService requestApiService,IOptions<StockSource> stockSource)
+    public class StockService(StockContext db, ILogger<StockService> logger, RequestApiService requestApiService,IOptions<StockSource> stockSource,IMemoryCache cache)
     {
         private readonly StockContext _db = db;
         private readonly RequestApiService _requestApiService = requestApiService;
@@ -29,7 +31,18 @@ namespace StockWeb.Services.ServicesForControllers
         /// 因為刪除資料跟更新上市與上櫃資料的時候可能都會用到DbContext，這樣同一個實例的DbContext會打架，要馬用非同步鎖鎖住，要馬注入ServiceScopeFactory來CeateScope取得新的DbContext
         /// </summary>
         private readonly SemaphoreSlim _semaphoreSlimForDbContext = new(1, 1);
+        private readonly IMemoryCache _cache = cache;
+        private Dictionary<int, StockBaseInfo>? _baseInfos=null;
 
+        private  Dictionary<int,StockBaseInfo> GetStockBaseInfos()
+        {
+            if(_baseInfos==null)
+            {
+                var baseInfos = _db.StockBaseInfos.AsNoTracking().ToDictionary(s => s.StockId, s => s);
+                _baseInfos = baseInfos;
+            }
+            return _baseInfos;
+        }
 
         #region 更新股票基本資訊表
 
@@ -169,10 +182,10 @@ namespace StockWeb.Services.ServicesForControllers
             // 停止計時器
             stopwatch.Stop();
             Console.WriteLine($"插入資料耗費 : {stopwatch.ElapsedMilliseconds} 毫秒");
-            stopwatch.Restart();
-            await UpdateMovingAverage(date);
-            stopwatch.Stop();
-            Console.WriteLine($"更新日線資料耗費 : {stopwatch.ElapsedMilliseconds} 毫秒");
+            //stopwatch.Restart();
+            //await UpdateMovingAverage(date);
+            //stopwatch.Stop();
+            //Console.WriteLine($"更新日線資料耗費 : {stopwatch.ElapsedMilliseconds} 毫秒");
             await transaction.CommitAsync();
             
 
@@ -720,6 +733,48 @@ namespace StockWeb.Services.ServicesForControllers
 
         #endregion
 
+        #region 更新殖利率
+        public async Task 更新股票殖利率()
+        {
+            var dataTse=await 更新上市股票殖利率(2022);
+            return;
+        }
+        [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
+        public async Task<List<DividendYield>> 更新上市股票殖利率(int year)
+        {
+            List<DividendYield> result = new List<DividendYield>();
+            var starDate = new DateOnly(year, 1, 1);
+            var endDate=(new DateOnly(year+1, 1, 1)).AddDays(-1);
+            var parms=new Dictionary<string,string?>
+            {
+                {"startDate",starDate.ToDateFormateForTse() },
+                {"endDate", endDate.ToDateFormateForTse()}
+            };
+            var res = await _requestApiService.GetFromJsonAsync<上市股票殖利率回傳結果>(nameof(_stockSource.Twse), _stockSource.Twse.Route.上市股票殖利率資訊, parms,nameof(更新上市股票殖利率));
+            foreach (var row in res.data)
+            {
+                var baseInfos = GetStockBaseInfos();
+                if (int.TryParse(row[1], out var stockId) == false) continue;
+                if (baseInfos[stockId]==null || row[6]!="息") continue;
+                double price = row[3].ToDouble();
+                DividendYield yield = new DividendYield
+                {
+                    StockId = stockId,
+                    PayDate = row[0].ToDateOnly2(),
+                    Payment = row[5].ToDouble(),
+                };
+                yield.DividendYieldRate = yield.Payment / price;
+                result.Add(yield);
+            }
+            return result;
+        }
+
+        //[LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
+        //public async Task<List<DividendYield>> 更新上櫃股票殖利率(int year)
+        //{
+
+        //}
+        #endregion
 
         #region 股票條件篩選過濾
         public async Task<List<Strategy1ViewModel>> Strategy1(DateOnly date)

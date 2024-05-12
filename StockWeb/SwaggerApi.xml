@@ -45,6 +45,11 @@
             <param name="stockBaseInfo"></param>
             <exception cref="T:System.Exception"></exception>
         </member>
+        <member name="P:StockWeb.DbModels.StockDayInfo.Date">
+            <summary>
+            測試測試
+            </summary>
+        </member>
         <member name="M:StockWeb.Extensions.DateTimeExtension.ToDateFormateString1(System.DateTime)">
             <summary>
             返回 20230526的格式
