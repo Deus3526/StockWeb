@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 
 namespace StockWeb.DbModels;
 
@@ -23,11 +21,13 @@ public partial class StockContext : DbContext
 
     public virtual DbSet<StockDayInfo> StockDayInfos { get; set; }
 
+    public virtual DbSet<StockMa60breakoutDay> StockMa60breakoutDays { get; set; }
+
     public virtual DbSet<User> Users { get; set; }
 
-//    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-//#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-//        => optionsBuilder.UseSqlServer("Data Source=.,1434;User ID=sa;Password=Test.123;Initial Catalog=Stock;TrustServerCertificate=true");
+    //    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    //#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
+    //        => optionsBuilder.UseSqlServer("Data Source=.;User ID=sa;Password=Test.123;Initial Catalog=Stock;TrustServerCertificate=true");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -80,6 +80,13 @@ public partial class StockContext : DbContext
                 .HasForeignKey(d => d.StockId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_StockDayInfo_StockBaseInfo");
+        });
+
+        modelBuilder.Entity<StockMa60breakoutDay>(entity =>
+        {
+            entity
+                .HasNoKey()
+                .ToTable("StockMA60BreakoutDays");
         });
 
         modelBuilder.Entity<User>(entity =>

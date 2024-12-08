@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace StockWeb.DbModels;
+﻿namespace StockWeb.DbModels;
 
 public partial class StockBaseInfo
 {

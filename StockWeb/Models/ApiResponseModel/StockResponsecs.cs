@@ -47,12 +47,12 @@ namespace StockWeb.Models.ApiResponseModel
         public string? reportDate { get; set; }
         public int iTotalRecords { get; set; }
         public object[]? note { get; set; }
-        public string[][]? aaData { get; set; }
+        public string[][]? Data { get; set; }
 
         public void 轉換為上櫃股票基本資訊_流通股數(ConcurrentDictionary<int, StockBaseInfo> concurrentBaseInfos)
         {
-            ArgumentNullException.ThrowIfNull(aaData);
-            foreach (string[] s in aaData)
+            ArgumentNullException.ThrowIfNull(Data);
+            foreach (string[] s in Data)
             {
                 if (int.TryParse(s[1], out int stockId) == false) continue;
                 StockBaseInfo? baseInfo = concurrentBaseInfos.GetValueOrDefault(stockId);
@@ -169,87 +169,66 @@ namespace StockWeb.Models.ApiResponseModel
         public int? total { get; set; }
     }
 
-
-    public class 上櫃股票盤後基本資訊回傳結果
+    public class 上櫃股票回傳結果Base
     {
-        public string? reportDate { get; set; }
-        public string? reportTitle { get; set; }
-        public int? iTotalRecords { get; set; }
-        public int? iTotalDisplayRecords { get; set; }
-        public int? colNum { get; set; }
-        public string? listNum { get; set; }
-        public string? totalAmount { get; set; }
-        public string? totalVolumn { get; set; }
-        public string? totalCount { get; set; }
-        public object[]? mmData { get; set; }
-        public required string[][] aaData { get; set; }
+        public string? date { get; set; }
+        public string? stat { get; set; }
+        public required TablesModel[] tables { get; set; }  // 改為陣列
+
+        public class TablesModel
+        {
+            public string? title { get; set; }
+            public string? subtitle { get; set; }
+            public string? date { get; set; }
+            public int totalCount { get; set; }
+            public string[]? fields { get; set; }
+            public required string[][] data { get; set; }
+            public string[][]? summary { get; set; }
+            public string[]? notes { get; set; }
+        }
+    }
+
+    public class 上櫃股票盤後基本資訊回傳結果 : 上櫃股票回傳結果Base
+    {
+
     }
 
 
-    public class 上櫃股票盤後當沖資訊回傳結果
+    public class 上櫃股票盤後當沖資訊回傳結果 : 上櫃股票回傳結果Base
     {
-        public string? reportDate { get; set; }
-        public int? iTotalRecords { get; set; }
-        public string? stat_0 { get; set; }
-        public string? stat_1 { get; set; }
-        public string? stat_2 { get; set; }
-        public string? stat_3 { get; set; }
-        public string? stat_4 { get; set; }
-        public string? stat_5 { get; set; }
-        public object[]? totalData { get; set; }
-        public required string[][] aaData { get; set; }
     }
 
 
-    public class 上櫃股票盤後融資融券資訊回傳結果
+    public class 上櫃股票盤後融資融券資訊回傳結果 : 上櫃股票回傳結果Base
     {
-        public string? reportDate { get; set; }
-        public int? iTotalRecords { get; set; }
-        public required string[][] aaData { get; set; }
-        public string[]? tfootData_one { get; set; }
-        public string[]? tfootData_two { get; set; }
+
     }
 
 
-    public class 上櫃股票盤後借券資訊回傳結果
+    public class 上櫃股票盤後借券資訊回傳結果 : 上櫃股票回傳結果Base
     {
-        public string? reportDate { get; set; }
-        public int? iTotalRecords { get; set; }
-        public required string[][] aaData { get; set; }
-        public object[]? tfootData { get; set; }
+
     }
 
-    public class 上櫃股票盤後外資淨買超資訊回傳結果
+    public class 上櫃股票盤後外資淨買超資訊回傳結果 : 上櫃股票回傳結果Base
     {
-        public string? reportTitle { get; set; }
-        public string? reportDate { get; set; }
-        public int? iTotalRecords { get; set; }
-        public required string[][] aaData { get; set; }
+
     }
 
-    public class 上櫃股票盤後外資淨賣超資訊回傳結果
+    public class 上櫃股票盤後外資淨賣超資訊回傳結果 : 上櫃股票回傳結果Base
     {
-        public string? reportTitle { get; set; }
-        public string? reportDate { get; set; }
-        public int? iTotalRecords { get; set; }
-        public required string[][] aaData { get; set; }
+
     }
 
 
-    public class 上櫃股票盤後投信淨買超資訊回傳結果
+    public class 上櫃股票盤後投信淨買超資訊回傳結果 : 上櫃股票回傳結果Base
     {
-        public string? reportTitle { get; set; }
-        public string? reportDate { get; set; }
-        public int? iTotalRecords { get; set; }
-        public required string[][] aaData { get; set; }
+
     }
 
-    public class 上櫃股票盤後投信淨賣超資訊回傳結果
+    public class 上櫃股票盤後投信淨賣超資訊回傳結果 : 上櫃股票回傳結果Base
     {
-        public string? reportTitle { get; set; }
-        public string? reportDate { get; set; }
-        public int? iTotalRecords { get; set; }
-        public required string[][] aaData { get; set; }
+
     }
 
 
@@ -296,12 +275,4 @@ namespace StockWeb.Models.ApiResponseModel
         public string? strDate { get; set; }
         public string? endDate { get; set; }
     }
-
-
-
-
-
-
-
-
 }

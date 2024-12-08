@@ -1,24 +1,11 @@
-﻿
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc.Authorization;
-using Microsoft.AspNetCore.OutputCaching;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
 using Serilog;
-using Serilog.Events;
-using Serilog.Filters;
-using Serilog.Formatting.Compact;
 using StockWeb.DbModels;
-using StockWeb.Enums;
 using StockWeb.Services;
 using StockWeb.Services.ServicesForControllers;
 using StockWeb.StartUpConfigure;
 using StockWeb.StartUpConfigure.Middleware;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -63,6 +50,9 @@ namespace StockWeb
                 builder.Services.AddSingleton<RequestLogMiddleware>();
                 builder.Services.AddSingleton<CustomExceptionHandler>();
                 builder.Services.AddScoped<StockService>();
+                builder.Services.AddSingleton<EventBus>();
+                builder.Services.AddHostedService<StockBreakout60MaService>();
+                builder.Services.AddSingleton<StockBreakout60MaService>();
                 builder.Services.AddMemoryCache();
                 builder.Services.AddOutputCache();
                 //builder.Services.AddDistributedMemoryCache();  //如果之後要用Redis這種分布式緩存，可以先用這個頂著，即便預設也是在本地中儲存數據，但跟Redis是一樣的介面
@@ -92,10 +82,10 @@ namespace StockWeb
                 app.MapControllers();
                 app.Run();
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 systemLogger.Fatal("發生錯誤");
-                systemLogger.Fatal($"Error: {@ex}",ex);
+                systemLogger.Fatal($"Error: {@ex}", ex);
             }
             finally
             {
@@ -119,7 +109,7 @@ namespace StockWeb
                    rollingInterval: RollingInterval.Hour, // 每小時一個檔案
                    retainedFileCountLimit: 24 * 30 // 最多保留 30 天份的 Log 檔案
                )
-               .CreateLogger(); 
+               .CreateLogger();
             return systemLogger;
         }
     }

@@ -1,16 +1,9 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Primitives;
-using StockWeb.DbModels;
-using StockWeb.Models.ApiResponseModel;
 using StockWeb.Models.RequestParms;
+using StockWeb.Services;
 using StockWeb.Services.ServicesForControllers;
 using StockWeb.StartUpConfigure;
-using System.ComponentModel.DataAnnotations;
 
 namespace StockWeb.Controllers
 {
@@ -18,9 +11,10 @@ namespace StockWeb.Controllers
     [ApiController]
     [ApiExplorerSettings(GroupName = nameof(ApiGroups.Stock))]
     [Tags(Tags.股票相關)]
-    public class StockController(StockService stockService) : ControllerBase
+    public class StockController(StockService stockService, StockBreakout60MaService stockBreakout60MaService) : ControllerBase
     {
         private readonly StockService _stockService = stockService;
+        private readonly StockBreakout60MaService _stockBreakout60MaService = stockBreakout60MaService;
 
         /// <summary>
         /// 更新DB上市櫃股票基本資訊
@@ -71,6 +65,12 @@ namespace StockWeb.Controllers
         {
             var result = await _stockService.Strategy1(date);
             return Ok(result);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> StrategyStockBreakoutBollingWithMa60(DateOnly date)
+        {
+            return Ok(await _stockBreakout60MaService.StrategyStockBreakoutBollingWithMa60(date));
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using Microsoft.OpenApi.Models;
+﻿using Microsoft.OpenApi.Any;
+using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace StockWeb.StartUpConfigure
@@ -14,6 +15,10 @@ namespace StockWeb.StartUpConfigure
         {
             builder.Services.AddSwaggerGen(options =>
             {
+                options.MapType<DateOnly>(() => new OpenApiSchema
+                {
+                    Example = new OpenApiString(DateOnly.FromDateTime(DateTime.Today).ToString("yyyy-MM-dd"))
+                });
                 foreach (var field in typeof(ApiGroups).GetFields())
                 {
                     var group = (ApiGroup)field.GetValue(null)!;
@@ -80,7 +85,7 @@ namespace StockWeb.StartUpConfigure
     }
     public class ApiGroup(string downListName, string description, string version)
     {
-        public string DownListName { get;} = downListName;
+        public string DownListName { get; } = downListName;
         public string Description { get; } = description;
         public string Version { get; } = version;
     }
@@ -95,10 +100,10 @@ namespace StockWeb.StartUpConfigure
         public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
         {
             // 標籤的優先排序
-            var tagOrder = new List<string> 
-            { 
-                Tags.登入相關, 
-                Tags.股票相關 
+            var tagOrder = new List<string>
+            {
+                Tags.登入相關,
+                Tags.股票相關
             };
 
             // 根据标签排序
