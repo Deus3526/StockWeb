@@ -1,42 +1,36 @@
-﻿using StockWeb.DbModels;
-using StockWeb.Models.ApiResponseModel;
-using StockWeb.StartUpConfigure.Middleware;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-using System.Globalization;
-using System.Collections.Concurrent;
-using StockWeb.Enums;
+﻿using EFCore.BulkExtensions;
 using Microsoft.EntityFrameworkCore;
-using StockWeb.Extensions;
-using StockWeb.StartUpConfigure;
-using StockWeb.ConstData;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
-using System.Collections.Generic;
-using System.Security.Cryptography;
-using StockWeb.Models.ViewModels;
-using Microsoft.Extensions.Options;
-using System.Diagnostics;
-using EFCore.BulkExtensions;
-using static StockWeb.Models.ApiResponseModel.上市股票盤後基本資訊回傳結果;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
+using StockWeb.DbModels;
+using StockWeb.Enums;
+using StockWeb.Extensions;
+using StockWeb.Models.ApiResponseModel;
+using StockWeb.Models.ViewModels;
+using StockWeb.StartUpConfigure;
+using StockWeb.StartUpConfigure.Middleware;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 
 namespace StockWeb.Services.ServicesForControllers
 {
-    public class StockService(StockContext db, ILogger<StockService> logger, RequestApiService requestApiService,IOptions<StockSource> stockSource,IMemoryCache cache)
+    public class StockService(StockContext db, ILogger<StockService> logger, RequestApiService requestApiService, IOptions<StockSource> stockSource, IMemoryCache cache, EventBus eventBus)
     {
         private readonly StockContext _db = db;
         private readonly RequestApiService _requestApiService = requestApiService;
         private readonly ILogger<StockService> _logger = logger;
-        private readonly StockSource _stockSource=stockSource.Value;
+        private readonly StockSource _stockSource = stockSource.Value;
+        private readonly EventBus _eventBus = eventBus;
         /// <summary>
         /// 因為刪除資料跟更新上市與上櫃資料的時候可能都會用到DbContext，這樣同一個實例的DbContext會打架，要馬用非同步鎖鎖住，要馬注入ServiceScopeFactory來CeateScope取得新的DbContext
         /// </summary>
         private readonly SemaphoreSlim _semaphoreSlimForDbContext = new(1, 1);
         private readonly IMemoryCache _cache = cache;
-        private Dictionary<int, StockBaseInfo>? _baseInfos=null;
+        private Dictionary<int, StockBaseInfo>? _baseInfos = null;
 
-        private  Dictionary<int,StockBaseInfo> GetStockBaseInfos()
+        private Dictionary<int, StockBaseInfo> GetStockBaseInfos()
         {
-            if(_baseInfos==null)
+            if (_baseInfos == null)
             {
                 var baseInfos = _db.StockBaseInfos.AsNoTracking().ToDictionary(s => s.StockId, s => s);
                 _baseInfos = baseInfos;
@@ -55,9 +49,9 @@ namespace StockWeb.Services.ServicesForControllers
         {
             Dictionary<int, StockBaseInfo> BaseInfos = await _db.StockBaseInfos.ToDictionaryAsync(s => s.StockId, s => s);
             ConcurrentDictionary<int, StockBaseInfo> concurrentBaseInfos = new();
-            List<Task> tasks = 
+            List<Task> tasks =
             [
-                更新上市股票基本訊息_計算流通張數(concurrentBaseInfos), 
+                更新上市股票基本訊息_計算流通張數(concurrentBaseInfos),
                 更新上櫃股票基本訊息_發行股數(concurrentBaseInfos)
             ];
 
@@ -81,7 +75,7 @@ namespace StockWeb.Services.ServicesForControllers
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
         protected virtual async Task 更新上市股票基本訊息_計算流通張數(ConcurrentDictionary<int, StockBaseInfo> concurrentBaseInfos)
         {
-            var res = await _requestApiService.GetFromJsonAsync<List<上市股票基本資訊>>(nameof(_stockSource.OpenapiTwse),_stockSource.OpenapiTwse.Route.上市股票基本訊息_計算流通張數);
+            var res = await _requestApiService.GetFromJsonAsync<List<上市股票基本資訊>>(nameof(_stockSource.OpenapiTwse), _stockSource.OpenapiTwse.Route.上市股票基本訊息_計算流通張數);
             foreach (上市股票基本資訊 s in res)
             {
                 ArgumentNullException.ThrowIfNull(s.公司代號);
@@ -108,7 +102,7 @@ namespace StockWeb.Services.ServicesForControllers
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
         protected virtual async Task 更新上櫃股票基本訊息_發行股數(ConcurrentDictionary<int, StockBaseInfo> concurrentBaseInfos)
         {
-            var res = await _requestApiService.GetFromJsonAsync<上櫃股票基本資訊_發行股數回傳結果>(nameof(_stockSource.Tpex),_stockSource.Tpex.Route.上櫃股票基本訊息_發行股數);
+            var res = await _requestApiService.GetFromJsonAsync<上櫃股票基本資訊_發行股數回傳結果>(nameof(_stockSource.Tpex), _stockSource.Tpex.Route.上櫃股票基本訊息_發行股數);
             res.轉換為上櫃股票基本資訊_流通股數(concurrentBaseInfos);
             return;
         }
@@ -123,11 +117,13 @@ namespace StockWeb.Services.ServicesForControllers
         /// <returns></returns>
         public async Task UpdateStockDayInfo(bool isHistoricalUpdate)
         {
-            DateOnly date=await GetDateMaxOrMinFromStockDayInfoAsync(isHistoricalUpdate);
+            DateOnly date = await GetDateMaxOrMinFromStockDayInfoAsync(isHistoricalUpdate);
             date = await 取得與參數日期最近的開市日期_若無資料則更新上市大盤盤後資訊(date);
-            _logger.LogInformation("開始更新日成交資訊 : {date}",date);
+            _logger.LogInformation("開始更新日成交資訊 : {date}", date);
 
             await UpdateStockDayInfoByDate(date);
+
+            _ = _eventBus.PublishAsync(new UpdateDayInfoEvent { Date = date });
         }
         /// <summary>
         /// 取得StockDayInfo最小或最大的交易日期
@@ -136,7 +132,7 @@ namespace StockWeb.Services.ServicesForControllers
         /// <returns></returns>
         private async Task<DateOnly> GetDateMaxOrMinFromStockDayInfoAsync(bool isHistoricalUpdate)
         {
-            DateOnly? date =null;  //如果Db完全沒有日成交資料，從2021/01/04開始計算
+            DateOnly? date = null;  //如果Db完全沒有日成交資料，從2021/01/04開始計算
             if (isHistoricalUpdate)
             {
                 date = await _db.StockDayInfos.MinAsync(s => (DateOnly?)s.Date);
@@ -145,7 +141,7 @@ namespace StockWeb.Services.ServicesForControllers
             {
                 date = await _db.StockDayInfos.MaxAsync(s => (DateOnly?)s.Date);
             }
-            if(date==null) date = new DateOnly(2021, 1, 4);  //如果Db完全沒有日成交資料，從2021/01/04開始計算
+            if (date == null) date = new DateOnly(2021, 1, 4);  //如果Db完全沒有日成交資料，從2021/01/04開始計算
             return date.Value;
         }
 
@@ -171,11 +167,11 @@ namespace StockWeb.Services.ServicesForControllers
             {
                 //如果是成交量為0的話，還是會有資料，這樣在前面update的時候會取得上一個交易日的收盤價
                 //但是如果是減資之類的停止交易的狀況 或是 未上市或已下市，不會有資料，此時收盤價會是0，不視為交易日
-                if (kvp.Value.收盤價 == 0) concurrentDayInfos.Remove(kvp.Key,out StockDayInfo? dayInfo);
+                if (kvp.Value.收盤價 == 0) concurrentDayInfos.Remove(kvp.Key, out StockDayInfo? dayInfo);
             }
             // 啟動計時器
             Stopwatch stopwatch = Stopwatch.StartNew();
-            using var transaction=await _db.Database.BeginTransactionAsync();
+            using var transaction = await _db.Database.BeginTransactionAsync();
             //_db.StockDayInfos.AddRange(concurrentDayInfos.Values);
             //await _db.SaveChangesAsync(); //3293毫秒
             await _db.BulkInsertAsync(concurrentDayInfos.Values); //237毫秒
@@ -187,7 +183,7 @@ namespace StockWeb.Services.ServicesForControllers
             //stopwatch.Stop();
             //Console.WriteLine($"更新日線資料耗費 : {stopwatch.ElapsedMilliseconds} 毫秒");
             await transaction.CommitAsync();
-            
+
 
             return;
         }
@@ -265,7 +261,7 @@ namespace StockWeb.Services.ServicesForControllers
             {
                 { "date", date.ToDateFormateForTse() }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上市股票盤後基本資訊回傳結果>(nameof(_stockSource.Twse),_stockSource.Twse.Route.上市股票盤後基本資訊, parms, "更新上市股票盤後基本資訊");
+            var res = await _requestApiService.PostFromJsonAsync<上市股票盤後基本資訊回傳結果>(nameof(_stockSource.Twse), _stockSource.Twse.Route.上市股票盤後基本資訊, parms, HttpContentType.FormData, "更新上市股票盤後基本資訊");
             string[][]? datas = res.tables[8].data;
             ArgumentNullException.ThrowIfNull(datas);
             foreach (var row in datas)
@@ -298,7 +294,7 @@ namespace StockWeb.Services.ServicesForControllers
             {
                 { "date", date.ToDateFormateForTse() }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上市股票盤後當沖資訊回傳結果>(nameof(_stockSource.Twse),_stockSource.Twse.Route.上市股票盤後當沖資訊, parms);
+            var res = await _requestApiService.GetFromJsonAsync<上市股票盤後當沖資訊回傳結果>(nameof(_stockSource.Twse), _stockSource.Twse.Route.上市股票盤後當沖資訊, parms);
             string[][]? datas = res.tables[1].data;
             ArgumentNullException.ThrowIfNull(datas);
             foreach (var row in datas)
@@ -319,7 +315,7 @@ namespace StockWeb.Services.ServicesForControllers
             {
                 { "date", date.ToDateFormateForTse() }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上市股票盤後融資融券資訊回傳結果>(nameof(_stockSource.Twse),_stockSource.Twse.Route.上市股票盤後融資融券資訊 , parms);
+            var res = await _requestApiService.GetFromJsonAsync<上市股票盤後融資融券資訊回傳結果>(nameof(_stockSource.Twse), _stockSource.Twse.Route.上市股票盤後融資融券資訊, parms);
 
             string[][]? datas = res.tables[1].data;
             ArgumentNullException.ThrowIfNull(datas);
@@ -346,7 +342,7 @@ namespace StockWeb.Services.ServicesForControllers
             {
                 { "date", date.ToDateFormateForTse() }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上市股票盤後借券資訊回傳結果>(nameof(_stockSource.Twse),_stockSource.Twse.Route.上市股票盤後借券資訊, parms);
+            var res = await _requestApiService.GetFromJsonAsync<上市股票盤後借券資訊回傳結果>(nameof(_stockSource.Twse), _stockSource.Twse.Route.上市股票盤後借券資訊, parms);
             string[][]? datas = res.data;
             ArgumentNullException.ThrowIfNull(datas);
             foreach (var row in datas)
@@ -369,7 +365,7 @@ namespace StockWeb.Services.ServicesForControllers
             {
                 { "date", date.ToDateFormateForTse() }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上市股票盤後外資資訊回傳結果>(nameof(_stockSource.Twse),_stockSource.Twse.Route.上市股票盤後外資資訊 , parms);
+            var res = await _requestApiService.GetFromJsonAsync<上市股票盤後外資資訊回傳結果>(nameof(_stockSource.Twse), _stockSource.Twse.Route.上市股票盤後外資資訊, parms);
             string[][]? datas = res.data;
             ArgumentNullException.ThrowIfNull(datas);
             foreach (var row in datas)
@@ -391,7 +387,7 @@ namespace StockWeb.Services.ServicesForControllers
             {
                 { "date", date.ToDateFormateForTse() }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上市股票盤後投信資訊回傳結果>(nameof(_stockSource.Twse),_stockSource.Twse.Route.上市股票盤後投信資訊, parms);
+            var res = await _requestApiService.GetFromJsonAsync<上市股票盤後投信資訊回傳結果>(nameof(_stockSource.Twse), _stockSource.Twse.Route.上市股票盤後投信資訊, parms);
             string[][]? datas = res.data;
             ArgumentNullException.ThrowIfNull(datas);
             foreach (var row in datas)
@@ -411,10 +407,10 @@ namespace StockWeb.Services.ServicesForControllers
         {
             var parms = new Dictionary<string, string?>
             {
-                { "d", date.ToDateFormateForOtc() }
+                { "date", date.ToDateFormateForOtc() }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後基本資訊回傳結果>(nameof(_stockSource.Tpex),_stockSource.Tpex.Route.上櫃股票盤後基本資訊, parms);
-            string[][]? datas = res.aaData;
+            var res = await _requestApiService.PostFromJsonAsync<上櫃股票盤後基本資訊回傳結果>(nameof(_stockSource.Tpex), _stockSource.Tpex.Route.上櫃股票盤後基本資訊, parms, HttpContentType.FormData);
+            string[][]? datas = res.tables[0].data;
             ArgumentNullException.ThrowIfNull(datas);
             foreach (var row in datas)
             {
@@ -443,10 +439,11 @@ namespace StockWeb.Services.ServicesForControllers
         {
             var parms = new Dictionary<string, string?>
             {
-                { "d", date.ToDateFormateForOtc() }
+                { "date", date.ToDateFormateForOtc() },
+                {"type","Daily" }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後當沖資訊回傳結果>(nameof(_stockSource.Tpex),_stockSource.Tpex.Route.上櫃股票盤後當沖資訊, parms);
-            string[][]? datas = res.aaData;
+            var res = await _requestApiService.PostFromJsonAsync<上櫃股票盤後當沖資訊回傳結果>(nameof(_stockSource.Tpex), _stockSource.Tpex.Route.上櫃股票盤後當沖資訊, parms, HttpContentType.FormData);
+            string[][]? datas = res.tables[0].data;
             ArgumentNullException.ThrowIfNull(datas);
             foreach (var row in datas)
             {
@@ -464,10 +461,10 @@ namespace StockWeb.Services.ServicesForControllers
         {
             var parms = new Dictionary<string, string?>
             {
-                { "d", date.ToDateFormateForOtc() }
+                { "date", date.ToDateFormateForOtc() }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後融資融券資訊回傳結果>(nameof(_stockSource.Tpex),_stockSource.Tpex.Route.上櫃股票盤後融資融券資訊, parms);
-            string[][]? datas = res.aaData;
+            var res = await _requestApiService.PostFromJsonAsync<上櫃股票盤後融資融券資訊回傳結果>(nameof(_stockSource.Tpex), _stockSource.Tpex.Route.上櫃股票盤後融資融券資訊, parms, HttpContentType.FormData);
+            string[][]? datas = res.tables[0].data;
             ArgumentNullException.ThrowIfNull(datas);
             foreach (var row in datas)
             {
@@ -491,10 +488,10 @@ namespace StockWeb.Services.ServicesForControllers
         {
             var parms = new Dictionary<string, string?>
             {
-                { "d", date.ToDateFormateForOtc() }
+                { "date", date.ToDateFormateForOtc() }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後借券資訊回傳結果>(nameof(_stockSource.Tpex),_stockSource.Tpex.Route.上櫃股票盤後借券資訊 , parms);
-            string[][]? datas = res.aaData;
+            var res = await _requestApiService.PostFromJsonAsync<上櫃股票盤後借券資訊回傳結果>(nameof(_stockSource.Tpex), _stockSource.Tpex.Route.上櫃股票盤後借券資訊, parms, HttpContentType.FormData);
+            string[][]? datas = res.tables[0].data;
             ArgumentNullException.ThrowIfNull(datas);
             foreach (var row in datas)
             {
@@ -514,10 +511,12 @@ namespace StockWeb.Services.ServicesForControllers
         {
             var parms = new Dictionary<string, string?>
             {
-                { "d", date.ToDateFormateForOtc() }
+                { "date", date.ToDateFormateForOtc() },
+                {"searchType","buy" },
+                {"type","Daily" }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後外資淨買超資訊回傳結果>(nameof(_stockSource.Tpex),_stockSource.Tpex.Route.上櫃股票盤後外資淨買超資訊 , parms);
-            string[][]? datas = res.aaData;
+            var res = await _requestApiService.PostFromJsonAsync<上櫃股票盤後外資淨買超資訊回傳結果>(nameof(_stockSource.Tpex), _stockSource.Tpex.Route.上櫃股票盤後外資淨買超資訊, parms, HttpContentType.FormData);
+            string[][]? datas = res.tables[0].data;
             ArgumentNullException.ThrowIfNull(datas);
             foreach (var row in datas)
             {
@@ -536,10 +535,12 @@ namespace StockWeb.Services.ServicesForControllers
         {
             var parms = new Dictionary<string, string?>
             {
-                { "d", date.ToDateFormateForOtc() }
+                { "date", date.ToDateFormateForOtc() },
+                {"searchType","sell" },
+                {"type","Daily" }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後外資淨賣超資訊回傳結果>(nameof(_stockSource.Tpex),_stockSource.Tpex.Route.上櫃股票盤後外資淨賣超資訊, parms);
-            string[][]? datas = res.aaData;
+            var res = await _requestApiService.PostFromJsonAsync<上櫃股票盤後外資淨賣超資訊回傳結果>(nameof(_stockSource.Tpex), _stockSource.Tpex.Route.上櫃股票盤後外資淨賣超資訊, parms, HttpContentType.FormData);
+            string[][]? datas = res.tables[0].data;
             ArgumentNullException.ThrowIfNull(datas);
             foreach (var row in datas)
             {
@@ -558,10 +559,12 @@ namespace StockWeb.Services.ServicesForControllers
         {
             var parms = new Dictionary<string, string?>
             {
-                { "d", date.ToDateFormateForOtc() }
+                { "date", date.ToDateFormateForOtc() },
+                {"searchType","buy" },
+                {"type","Daily" }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後投信淨買超資訊回傳結果>(nameof(_stockSource.Tpex),_stockSource.Tpex.Route.上櫃股票盤後投信淨買超資訊, parms);
-            string[][]? datas = res.aaData;
+            var res = await _requestApiService.PostFromJsonAsync<上櫃股票盤後投信淨買超資訊回傳結果>(nameof(_stockSource.Tpex), _stockSource.Tpex.Route.上櫃股票盤後投信淨買超資訊, parms, HttpContentType.FormData);
+            string[][]? datas = res.tables[0].data;
             ArgumentNullException.ThrowIfNull(datas);
             foreach (var row in datas)
             {
@@ -580,10 +583,12 @@ namespace StockWeb.Services.ServicesForControllers
         {
             var parms = new Dictionary<string, string?>
             {
-                { "d", date.ToDateFormateForOtc() }
+                { "date", date.ToDateFormateForOtc() },
+                {"searchType","sell" },
+                {"type","Daily" }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上櫃股票盤後投信淨賣超資訊回傳結果>(nameof(_stockSource.Tpex),_stockSource.Tpex.Route.上櫃股票盤後投信淨賣超資訊, parms);
-            string[][]? datas = res.aaData;
+            var res = await _requestApiService.PostFromJsonAsync<上櫃股票盤後投信淨賣超資訊回傳結果>(nameof(_stockSource.Tpex), _stockSource.Tpex.Route.上櫃股票盤後投信淨賣超資訊, parms, HttpContentType.FormData);
+            string[][]? datas = res.tables[0].data;
             ArgumentNullException.ThrowIfNull(datas);
             foreach (var row in datas)
             {
@@ -671,14 +676,14 @@ namespace StockWeb.Services.ServicesForControllers
         protected virtual async Task<DateOnly> 取得與參數日期最近的開市日期_若無資料則更新上市大盤盤後資訊(DateOnly date)
         {
             //先找資料庫是否有更大日期的的大盤資料，沒有的話則更新這個月大盤資料
-             DateOnly? result = await _db.MarketDayInfos.Where(m =>m.Date>date).Select(m => (DateOnly?)m.Date).MinAsync();
+            DateOnly? result = await _db.MarketDayInfos.Where(m => m.Date > date).Select(m => (DateOnly?)m.Date).MinAsync();
             if (result != null) return result.Value;
-            List<DateOnly>  marketDayInfosDatesUpdated = (await 更新上市大盤盤後資訊_以月為單位(date)).Select(m => m.Date).ToList();
+            List<DateOnly> marketDayInfosDatesUpdated = (await 更新上市大盤盤後資訊_以月為單位(date)).Select(m => m.Date).ToList();
 
 
             //更新月份後，此月份是否有下一個交易日，如果沒有的話要再更新下個月的大盤資料
-            result = marketDayInfosDatesUpdated.Where(m => m > date).Select(m=>(DateOnly?)m).Min();
-            if (result!=null) return result.Value;
+            result = marketDayInfosDatesUpdated.Where(m => m > date).Select(m => (DateOnly?)m).Min();
+            if (result != null) return result.Value;
 
             //用下一個月的1號來更新下個月的大盤資料
             var nextMonthDate = (new DateOnly(date.Year, date.Month, 1)).AddMonths(1);
@@ -697,7 +702,7 @@ namespace StockWeb.Services.ServicesForControllers
             {
                 { "date", date.ToDateFormateForTse() }
             };
-            var res = await _requestApiService.GetFromJsonAsync<上市大盤成交資訊回傳結果>(nameof(_stockSource.Twse),_stockSource.Twse.Route.上市大盤成交資訊,parms);
+            var res = await _requestApiService.GetFromJsonAsync<上市大盤成交資訊回傳結果>(nameof(_stockSource.Twse), _stockSource.Twse.Route.上市大盤成交資訊, parms);
 
             List<MarketDayInfo> marketDayInfos = res.ToMarketDayInfo();
             _db.MarketDayInfos.AddRange(marketDayInfos);
@@ -736,7 +741,7 @@ namespace StockWeb.Services.ServicesForControllers
         #region 更新殖利率
         public async Task 更新股票殖利率()
         {
-            var dataTse=await 更新上市股票殖利率(2022);
+            var dataTse = await 更新上市股票殖利率(2022);
             return;
         }
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
@@ -744,18 +749,18 @@ namespace StockWeb.Services.ServicesForControllers
         {
             List<DividendYield> result = new List<DividendYield>();
             var starDate = new DateOnly(year, 1, 1);
-            var endDate=(new DateOnly(year+1, 1, 1)).AddDays(-1);
-            var parms=new Dictionary<string,string?>
+            var endDate = (new DateOnly(year + 1, 1, 1)).AddDays(-1);
+            var parms = new Dictionary<string, string?>
             {
                 {"startDate",starDate.ToDateFormateForTse() },
                 {"endDate", endDate.ToDateFormateForTse()}
             };
-            var res = await _requestApiService.GetFromJsonAsync<上市股票殖利率回傳結果>(nameof(_stockSource.Twse), _stockSource.Twse.Route.上市股票殖利率資訊, parms,nameof(更新上市股票殖利率));
+            var res = await _requestApiService.GetFromJsonAsync<上市股票殖利率回傳結果>(nameof(_stockSource.Twse), _stockSource.Twse.Route.上市股票殖利率資訊, parms, nameof(更新上市股票殖利率));
             foreach (var row in res.data)
             {
                 var baseInfos = GetStockBaseInfos();
                 if (int.TryParse(row[1], out var stockId) == false) continue;
-                if (baseInfos[stockId]==null || row[6]!="息") continue;
+                if (baseInfos[stockId] == null || row[6] != "息") continue;
                 double price = row[3].ToDouble();
                 DividendYield yield = new DividendYield
                 {
@@ -789,7 +794,7 @@ namespace StockWeb.Services.ServicesForControllers
             //}).AsSingleQuery();
             //var q2 = q.Where(r => r.BuyAmount >= r.StockAmount * 0.01 && r.Date==date).ToList();
             //return q2.ToList();
-            DateOnly dateUpperLimit=date.AddDays(-40);
+            DateOnly dateUpperLimit = date.AddDays(-40);
             var q = await _db.Database.SqlQuery<Strategy1ViewModel>($"exec Strategy1 @date={date},@dateUpperLimit={dateUpperLimit} ").ToListAsync();
             //return q.OrderByDescending(x=>x.BuyRate).ToList();
             return q;

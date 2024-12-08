@@ -1,13 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace StockWeb.DbModels;
+﻿namespace StockWeb.DbModels;
 
 public partial class StockDayInfo
 {
-    /// <summary>
-    /// 測試測試
-    /// </summary>
     public DateOnly Date { get; set; }
 
     public int StockId { get; set; }

@@ -18,7 +18,7 @@ namespace StockWeb.Extensions
         /// <returns></returns>
         public static string ToDateFormateString1(this DateTime dateTime)
         {
-            return dateTime.ToString("yyyyMMdd"); 
+            return dateTime.ToString("yyyyMMdd");
         }
 
         /// <summary>
@@ -42,13 +42,13 @@ namespace StockWeb.Extensions
         }
 
         /// <summary>
-        /// 返回111/05/26的格式
+        /// 返回2024/11/21的格式
         /// </summary>
         /// <param name="date"></param>
         /// <returns></returns>
         public static string ToDateFormateForOtc(this DateOnly date)
         {
-            return date.ToString("yyy/MM/dd", culture);
+            return date.ToString("yyyy/MM/dd");
         }
 
 

@@ -1,6 +1,5 @@
-﻿using System.Text.Json;
-using System.Text;
-using System.Timers;
+﻿using System.Text;
+using System.Text.Json;
 using Timer = System.Timers.Timer;
 
 namespace TimerForUpdateStockDayInfo
@@ -10,18 +9,18 @@ namespace TimerForUpdateStockDayInfo
         static async Task Main(string[] args)
         {
             HttpClient client = new HttpClient();
-            var timer = new Timer(1000*60*5); // 10分鐘觸發一次
+            var timer = new Timer(1000 * 60 * 2); // 10分鐘觸發一次
             Console.WriteLine("Press Enter to exit...");
             await AsyncOperation(client, timer);
-            timer.Elapsed += async (sender, e) => await AsyncOperation(client,timer);
+            timer.Elapsed += async (sender, e) => await AsyncOperation(client, timer);
             timer.Start();
 
 
             // 防止程序立即退出
- 
+
             Console.ReadLine();
         }
-        static async Task AsyncOperation(HttpClient client,Timer timer)
+        static async Task AsyncOperation(HttpClient client, Timer timer)
         {
             try
             {
