@@ -1,4 +1,6 @@
-﻿namespace StockWeb.Models.ViewModels
+﻿using AspectCore.DynamicProxy.Parameters;
+
+namespace StockWeb.Models.ViewModels
 {
     public abstract class StockViewModelBase
     {
@@ -24,5 +26,6 @@
         public double Price { get; set; }
         public int 成交量 { get; set; }
         public double 漲幅 { get; set; }
+        public double 超過布林漲幅 { get; set; }
     }
 }

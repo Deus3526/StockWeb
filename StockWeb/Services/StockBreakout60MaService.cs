@@ -25,6 +25,7 @@ namespace StockWeb.Services
 
         private async Task RecordStockBreakout60Table(UpdateDayInfoEvent e)
         {
+            Console.WriteLine($"{nameof(RecordStockBreakout60Table)} Start...");
             try
             {
                 var q1 = await _db.QueryStockDayInfoWithMA_WithLastMa60AndBolling(e.Date);
@@ -83,10 +84,11 @@ namespace StockWeb.Services
                     DaysSinceBreakout = q2.FirstOrDefault(x => x.StockId == item.StockId)?.DaysSinceBreakout ?? -1,
                     StockName = "aaa",
                     成交量 = item.成交量,
-                    漲幅 = item.漲幅
+                    漲幅 = item.漲幅,
+                    超過布林漲幅 = (item.收盤價 - item.BollingTop) / item.BollingTop
                 });
             }
-            return result.Where(x => x.DaysSinceBreakout >= 0 && x.DaysSinceBreakout <= 15 && x.成交量 > 500).OrderByDescending(x => x.漲幅).ToList();
+            return result.Where(x => x.DaysSinceBreakout >= 0 && x.DaysSinceBreakout <= 15 && x.成交量 > 500).OrderByDescending(x => x.超過布林漲幅).ToList();
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
