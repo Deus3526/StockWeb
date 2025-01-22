@@ -670,6 +670,11 @@ namespace StockWeb.Services.ServicesForControllers
             //WHERE sdi.Date = @date;
         }
 
+        [LoggingInterceptor]
+        public virtual async Task 更新月營收資訊(DateOnly date)
+        {
+            await _requestApiService.Get月營收(date);
+        }
 
 
         [LoggingInterceptor]

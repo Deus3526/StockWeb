@@ -1,9 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using StockWeb.DbModels;
+using StockWeb.Services.ServicesForControllers;
 using StockWeb.StartUpConfigure;
 using StockWeb.StartUpConfigure.Middleware;
 
@@ -17,10 +16,12 @@ namespace StockWeb.Controllers
     {
         private readonly StockContext _db;
         private readonly StockSource _source;
-        public TestController(StockContext db, IOptions<StockSource> source)
+        private readonly StockService _stockService;
+        public TestController(StockContext db, IOptions<StockSource> source, StockService stockService)
         {
             _db = db;
             _source = source.Value;
+            _stockService = stockService;
         }
 
         [HttpPost]
@@ -52,6 +53,14 @@ namespace StockWeb.Controllers
         {
             int? a = null;
             ArgumentNullException.ThrowIfNull(a);
+            return Ok();
+        }
+
+        [AllowAnonymous]
+        [HttpGet]
+        public async Task<IActionResult> test月營收(DateOnly date)
+        {
+            await _stockService.更新月營收資訊(date);
             return Ok();
         }
     }

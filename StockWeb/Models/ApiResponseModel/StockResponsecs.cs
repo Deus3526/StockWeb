@@ -1,4 +1,8 @@
-﻿using StockWeb.DbModels;
+﻿using CsvHelper;
+using CsvHelper.Configuration;
+using CsvHelper.Configuration.Attributes;
+using CsvHelper.TypeConversion;
+using StockWeb.DbModels;
 using StockWeb.Enums;
 using StockWeb.Extensions;
 using System.Collections.Concurrent;
@@ -275,4 +279,34 @@ namespace StockWeb.Models.ApiResponseModel
         public string? strDate { get; set; }
         public string? endDate { get; set; }
     }
+    public class 月營收資訊
+    {
+        [Name("資料年月")]
+        public string MonthString { get; set; }
+        [Name("公司代號")]
+        public string StockId { get; set; }
+        [Name("營業收入-上月比較增減(%)")]
+        [TypeConverter(typeof(Decimal0IfEmptyConverter))]
+        public decimal MOM月增率 { get; set; }
+        [Name("營業收入-去年同月增減(%)")]
+        [TypeConverter(typeof(Decimal0IfEmptyConverter))]
+        public decimal YoY年增率 { get; set; }
+        [Name("累計營業收入-前期比較增減(%)")]
+        [TypeConverter(typeof(Decimal0IfEmptyConverter))]
+        public decimal 累計Yoy { get; set; }
+        public class Decimal0IfEmptyConverter : DecimalConverter
+        {
+            public override object? ConvertFromString(string? text, IReaderRow row, MemberMapData memberMapData)
+            {
+                // 若該欄位是空字串或空白，就回傳 0
+                if (string.IsNullOrWhiteSpace(text))
+                {
+                    return 0m;
+                }
+                // 否則，使用基底 DecimalConverter 解析
+                return base.ConvertFromString(text, row, memberMapData);
+            }
+        }
+    }
+
 }
