@@ -184,7 +184,7 @@ namespace StockWeb.Services.ServicesForControllers
             //Console.WriteLine($"更新日線資料耗費 : {stopwatch.ElapsedMilliseconds} 毫秒");
             await transaction.CommitAsync();
 
-
+            await 更新月營收資訊(date);
             return;
         }
         /// <summary>
@@ -370,12 +370,12 @@ namespace StockWeb.Services.ServicesForControllers
             ArgumentNullException.ThrowIfNull(datas);
             foreach (var row in datas)
             {
-                if (int.TryParse(row[0], out var stockId) == false) continue;
+                if (int.TryParse(row[1], out var stockId) == false) continue;
                 StockDayInfo? dayInfo = concurrentDayInfos.GetValueOrDefault(stockId);
                 if (dayInfo == null) continue;
-                dayInfo.外資買入 = Convert.ToInt32(decimal.Parse(row[2]) / 1000);
-                dayInfo.外資賣出 = Convert.ToInt32(decimal.Parse(row[3]) / 1000);
-                dayInfo.外資買賣超 = Convert.ToInt32(decimal.Parse(row[4]) / 1000);
+                dayInfo.外資買入 = Convert.ToInt32(decimal.Parse(row[9]) / 1000);
+                dayInfo.外資賣出 = Convert.ToInt32(decimal.Parse(row[10]) / 1000);
+                dayInfo.外資買賣超 = Convert.ToInt32(decimal.Parse(row[11]) / 1000);
             }
             return;
         }
@@ -670,6 +670,37 @@ namespace StockWeb.Services.ServicesForControllers
             //WHERE sdi.Date = @date;
         }
 
+        [LoggingInterceptor]
+        public virtual async Task 更新月營收資訊(DateOnly date)
+        {
+            var 營收date = date.AddMonths(-1);
+            var q = await _requestApiService.Get月營收(營收date, StockTypeEnum.tse);
+            var q2 = await _requestApiService.Get月營收(營收date, StockTypeEnum.otc);
+            q.AddRange(q2);
+
+
+            var db營收Data = await _db.月營收s.Where(x => x.Year == 營收date.Year && x.Month == 營收date.Month).ToDictionaryAsync(x => x.StockId, x => x);
+
+            List<月營收> list = new List<月營收>();
+            foreach (var item in q)
+            {
+                if (!int.TryParse(item.StockId, out var stockId)) continue;
+                if (db營收Data.ContainsKey(stockId)) continue;
+                var entity = new 月營收
+                {
+                    MoM = item.MOM月增率,
+                    Month = 營收date.Month,
+                    Year = 營收date.Year,
+                    StockId = stockId,
+                    YoY = item.YoY年增率,
+                    累計yoY = item.累計Yoy
+                };
+                list.Add(entity);
+            }
+
+            await _db.BulkInsertAsync(list);
+            return;
+        }
 
 
         [LoggingInterceptor]
@@ -797,6 +828,14 @@ namespace StockWeb.Services.ServicesForControllers
             DateOnly dateUpperLimit = date.AddDays(-40);
             var q = await _db.Database.SqlQuery<Strategy1ViewModel>($"exec Strategy1 @date={date},@dateUpperLimit={dateUpperLimit} ").ToListAsync();
             //return q.OrderByDescending(x=>x.BuyRate).ToList();
+            return q;
+
+        }
+
+        public async Task<List<Strategy8ViewModel>> Strategy8(DateOnly date)
+        {
+
+            var q = await _db.Database.SqlQuery<Strategy8ViewModel>($"exec Strategy8 @date={date} ").ToListAsync();
             return q;
 
         }

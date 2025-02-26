@@ -1,5 +1,11 @@
-﻿using Microsoft.AspNetCore.WebUtilities;
+﻿using CsvHelper;
+using CsvHelper.Configuration;
+using Microsoft.AspNetCore.WebUtilities;
 using StockWeb.ConstData;
+using StockWeb.Enums;
+using StockWeb.Extensions;
+using StockWeb.Models.ApiResponseModel;
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 
@@ -84,7 +90,6 @@ namespace StockWeb.Services
         private static HttpContent CreateFormDataContent(object data)
         {
             var formData = new MultipartFormDataContent();
-
             switch (data)
             {
                 case IDictionary<string, string> dict:
@@ -153,6 +158,44 @@ namespace StockWeb.Services
             }
 
             return new FormUrlEncodedContent(keyValuePairs);
+        }
+
+        public async Task<List<月營收資訊>> Get月營收(DateOnly date, StockTypeEnum stockType)
+        {
+            var stockString = stockType == StockTypeEnum.tse ? "sii" : "otc";
+            var url = "https://mopsov.twse.com.tw/server-java/FileDownLoad";
+            var formData = CreateUrlEncodedContent(new
+            {
+                step = @"9",
+                functionName = @"show_file2",
+                filePath = @$"/t21/{stockString}/",
+                fileName = @$"t21sc03_{date.ToTaiwanYear()}_{date.Month}.csv"
+            });
+
+            var response = await _httpClientFactory.CreateClient().PostAsync(url, formData);
+            response.EnsureSuccessStatusCode();
+            // 3. 準備 CsvConfiguration
+            var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+            {
+                Delimiter = ",",                      // 如果 MOPS CSV 是逗號分隔
+                HasHeaderRecord = true,               // 第一行是標頭
+                Encoding = Encoding.GetEncoding("big5"), // MOPS 通常是 big5 或 cp950
+                IgnoreBlankLines = true,
+                MissingFieldFound = null,             // 遇到缺欄位就不 Throw
+                BadDataFound = null                  // 遇到壞資料也不 Throw
+            };
+
+            // 4. 使用 CsvHelper 解析
+            using var stream = await response.Content.ReadAsStreamAsync();
+            using var reader = new StreamReader(stream, Encoding.GetEncoding("big5"));
+            using var csv = new CsvReader(reader, config);
+
+            // 這裡可以直接使用屬性 (Attribute) Name() 來對應欄位
+            var records = csv.GetRecords<月營收資訊>();
+            var list = new List<月營收資訊>(records);
+
+            return list;
+
         }
 
     }

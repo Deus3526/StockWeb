@@ -6,6 +6,7 @@ using StockWeb.Services;
 using StockWeb.Services.ServicesForControllers;
 using StockWeb.StartUpConfigure;
 using StockWeb.StartUpConfigure.Middleware;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -17,6 +18,7 @@ namespace StockWeb
         {
             var systemLogger = CreateSystemLogger();
             systemLogger.Information("程式開始");
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             try
             {
                 var builder = WebApplication.CreateBuilder(args);

@@ -4,7 +4,7 @@ namespace StockWeb.DbModels
 {
     public partial class StockBaseInfo
     {
-        public StockTypeEnum StockType { get; set; } =StockTypeEnum.UnKnown;
+        public StockTypeEnum StockType { get; set; } = StockTypeEnum.UnKnown;
 
         /// <summary>
         /// 輸入一個新的StockBaseInfo來更新來自DB的StockBaseInfo的資訊，ID要一樣

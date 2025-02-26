@@ -45,6 +45,11 @@
             <param name="stockBaseInfo"></param>
             <exception cref="T:System.Exception"></exception>
         </member>
+        <member name="P:StockWeb.DbModels.StockDayInfo.Date">
+            <summary>
+            測試測試
+            </summary>
+        </member>
         <member name="M:StockWeb.Extensions.DateTimeExtension.ToDateFormateString1(System.DateTime)">
             <summary>
             返回 20230526的格式
@@ -78,6 +83,20 @@
             將 111/05/26的字串轉換為DateOnly物件
             </summary>
             <param name="s"></param>
+            <returns></returns>
+        </member>
+        <member name="M:StockWeb.Extensions.DateTimeExtension.ToDateOnly3(System.String)">
+            <summary>
+            將 111/05的字串轉換為DateOnly物件
+            </summary>
+            <param name="s"></param>
+            <returns></returns>
+        </member>
+        <member name="M:StockWeb.Extensions.DateTimeExtension.ToTaiwanYear(System.DateOnly)">
+            <summary>
+            取得民國幾年
+            </summary>
+            <param name="date"></param>
             <returns></returns>
         </member>
         <member name="M:StockWeb.Extensions.StringExtensions.ToDouble(System.String)">
