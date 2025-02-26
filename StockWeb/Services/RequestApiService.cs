@@ -2,6 +2,8 @@
 using CsvHelper.Configuration;
 using Microsoft.AspNetCore.WebUtilities;
 using StockWeb.ConstData;
+using StockWeb.Enums;
+using StockWeb.Extensions;
 using StockWeb.Models.ApiResponseModel;
 using System.Globalization;
 using System.Text;
@@ -158,18 +160,19 @@ namespace StockWeb.Services
             return new FormUrlEncodedContent(keyValuePairs);
         }
 
-        public async Task Get月營收(DateOnly date)
+        public async Task<List<月營收資訊>> Get月營收(DateOnly date, StockTypeEnum stockType)
         {
-            var url = "https://mops.twse.com.tw/server-java/FileDownLoad";
+            var stockString = stockType == StockTypeEnum.tse ? "sii" : "otc";
+            var url = "https://mopsov.twse.com.tw/server-java/FileDownLoad";
             var formData = CreateUrlEncodedContent(new
             {
                 step = @"9",
                 functionName = @"show_file2",
-                filePath = @"/t21/sii/",
-                fileName = @"t21sc03_113_12.csv"
+                filePath = @$"/t21/{stockString}/",
+                fileName = @$"t21sc03_{date.ToTaiwanYear()}_{date.Month}.csv"
             });
+
             var response = await _httpClientFactory.CreateClient().PostAsync(url, formData);
-            //var response = await client.SendAsync(request);
             response.EnsureSuccessStatusCode();
             // 3. 準備 CsvConfiguration
             var config = new CsvConfiguration(CultureInfo.InvariantCulture)
@@ -191,20 +194,7 @@ namespace StockWeb.Services
             var records = csv.GetRecords<月營收資訊>();
             var list = new List<月營收資訊>(records);
 
-            // 簡單列印幾筆
-            foreach (var item in list)
-            {
-                Console.WriteLine(
-                    $"{item.MonthString} / {item.StockId} / MOM月增: {item.MOM月增率}, YoY年增: {item.YoY年增率}, 累計YoY: {item.累計Yoy}"
-                );
-            }
-
-            // 6. 你可以把 list 寫入資料庫 (EF Core / ADO.NET / Dapper ...)
-            // using (var db = new MyDbContext())
-            // {
-            //     db.月營收資訊表.AddRange(list);
-            //     db.SaveChanges();
-            // }
+            return list;
 
         }
 

@@ -286,25 +286,26 @@ namespace StockWeb.Models.ApiResponseModel
         [Name("公司代號")]
         public string StockId { get; set; }
         [Name("營業收入-上月比較增減(%)")]
-        [TypeConverter(typeof(Decimal0IfEmptyConverter))]
-        public decimal MOM月增率 { get; set; }
+        [TypeConverter(typeof(Double0IfEmptyConverter))]
+        public double MOM月增率 { get; set; }
         [Name("營業收入-去年同月增減(%)")]
-        [TypeConverter(typeof(Decimal0IfEmptyConverter))]
-        public decimal YoY年增率 { get; set; }
+        [TypeConverter(typeof(Double0IfEmptyConverter))]
+        public double YoY年增率 { get; set; }
         [Name("累計營業收入-前期比較增減(%)")]
-        [TypeConverter(typeof(Decimal0IfEmptyConverter))]
-        public decimal 累計Yoy { get; set; }
-        public class Decimal0IfEmptyConverter : DecimalConverter
+        [TypeConverter(typeof(Double0IfEmptyConverter))]
+        public double 累計Yoy { get; set; }
+        public class Double0IfEmptyConverter : DoubleConverter
         {
             public override object? ConvertFromString(string? text, IReaderRow row, MemberMapData memberMapData)
             {
-                // 若該欄位是空字串或空白，就回傳 0
                 if (string.IsNullOrWhiteSpace(text))
-                {
-                    return 0m;
-                }
-                // 否則，使用基底 DecimalConverter 解析
-                return base.ConvertFromString(text, row, memberMapData);
+                    return 0.0;
+
+                text = text.Trim();
+                if (double.TryParse(text, out double result))
+                    return result;
+
+                return 0.0;
             }
         }
     }

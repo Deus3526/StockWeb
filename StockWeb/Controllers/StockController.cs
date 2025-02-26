@@ -72,5 +72,12 @@ namespace StockWeb.Controllers
         {
             return Ok(await _stockBreakout60MaService.StrategyStockBreakoutBollingWithMa60(date));
         }
+
+        [HttpGet]
+        public async Task<IActionResult> Strategy8(DateOnly date)
+        {
+            var result = await _stockService.Strategy8(date);
+            return Ok(result);
+        }
     }
 }

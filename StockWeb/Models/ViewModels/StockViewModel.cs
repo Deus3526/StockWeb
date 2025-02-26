@@ -1,6 +1,4 @@
-﻿using AspectCore.DynamicProxy.Parameters;
-
-namespace StockWeb.Models.ViewModels
+﻿namespace StockWeb.Models.ViewModels
 {
     public abstract class StockViewModelBase
     {
@@ -15,6 +13,12 @@ namespace StockWeb.Models.ViewModels
         public int BuyAmount { get; set; }
 
         public double BuyRate { get; set; }
+    }
+
+    public class Strategy8ViewModel
+    {
+        public int StockId { get; set; }
+        public DateOnly Date { get; set; }
     }
 
 

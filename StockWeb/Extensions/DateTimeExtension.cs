@@ -67,5 +67,21 @@ namespace StockWeb.Extensions
             DateOnly date = DateOnly.ParseExact(s, "yyy年MM月dd日", culture);
             return date;
         }
+        /// <summary>
+        /// 將 111/05的字串轉換為DateOnly物件
+        /// </summary>
+        /// <param name="s"></param>
+        /// <returns></returns>
+        public static DateOnly ToDateOnly3(this string s)
+        {
+            DateOnly date = DateOnly.ParseExact(s, "yyy/MM", culture);
+            return date;
+        }
+        /// <summary>
+        /// 取得民國幾年
+        /// </summary>
+        /// <param name="date"></param>
+        /// <returns></returns>
+        public static int ToTaiwanYear(this DateOnly date) => date.Year - 1911;
     }
 }
