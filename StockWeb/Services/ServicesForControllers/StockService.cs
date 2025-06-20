@@ -839,6 +839,40 @@ namespace StockWeb.Services.ServicesForControllers
             return q;
 
         }
+        public async Task<List<Strategy9ViewModel>> Strategy9(DateOnly date)
+        {
+
+            var q = await _db.Database.SqlQuery<Strategy9ViewModel>($"exec Strategy9 @date={date} ").ToListAsync();
+            return q;
+
+        }
+
+        public async Task<List<Strategy10ViewModel>> Strategy10(DateOnly date)
+        {
+            var q = await _db.Database.SqlQuery<Strategy10ViewModel>($"exec Strategy10 @date={date} ").ToListAsync();
+            return q;
+        }
+        public async Task<List<Strategy11ViewModel>> Strategy11(DateOnly date)
+        {
+            var q = await _db.Database.SqlQuery<Strategy11ViewModel>($"exec Strategy11 @date={date} ").ToListAsync();
+            return q;
+        }
+
+        public async Task<List<Strategy12ViewModel>> Strategy12(DateOnly date)
+        {
+            var q = await _db.Database.SqlQuery<Strategy12ViewModel>($"exec Strategy12 @date={date} ").ToListAsync();
+            return q;
+        }
+        public async Task<List<Strategy14ViewModel>> Strategy14(DateOnly date)
+        {
+            var q = await _db.Database.SqlQuery<Strategy14ViewModel>($"exec Strategy14 @date={date} ").ToListAsync();
+            return q;
+        }
+        public async Task<List<Strategy15ViewModel>> Strategy15(DateOnly date)
+        {
+            var q = await _db.Database.SqlQuery<Strategy15ViewModel>($"exec Strategy15 @date={date} ").ToListAsync();
+            return q;
+        }
         #endregion
 
     }

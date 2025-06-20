@@ -72,11 +72,81 @@ namespace StockWeb.Controllers
         {
             return Ok(await _stockBreakout60MaService.StrategyStockBreakoutBollingWithMa60(date));
         }
-
+        /// <summary>
+        /// 營收三紅突破布林，融資增or外資買
+        /// </summary>
+        /// <param name="date"></param>
+        /// <returns></returns>
         [HttpGet]
         public async Task<IActionResult> Strategy8(DateOnly date)
         {
             var result = await _stockService.Strategy8(date);
+            return Ok(result);
+        }
+        /// <summary>
+        /// 營收三紅，穿過季線，且融資增or外資買
+        /// </summary>
+        /// <param name="date"></param>
+        /// <returns></returns>
+        [HttpGet]
+        public async Task<IActionResult> Strategy9(DateOnly date)
+        {
+            var result = await _stockService.Strategy9(date);
+            return Ok(result);
+        }
+        /// <summary>
+        /// 營收三紅，穿過某一條均線或布林
+        /// </summary>
+        /// <param name="date"></param>
+        /// <returns></returns>
+        [HttpGet]
+        public async Task<IActionResult> Strategy10(DateOnly date)
+        {
+            var result = await _stockService.Strategy10(date);
+            return Ok(result);
+        }
+        /// <summary>
+        /// 營收三紅，融資創10天內最高的兩倍
+        /// </summary>
+        /// <param name="date"></param>
+        /// <returns></returns>
+        [HttpGet]
+        public async Task<IActionResult> Strategy11(DateOnly date)
+        {
+            var result = await _stockService.Strategy11(date);
+            return Ok(result);
+        }
+        /// <summary>
+        /// 過去10天表現都贏過大盤
+        /// </summary>
+        /// <param name="date"></param>
+        /// <returns></returns>
+        [HttpGet]
+        public async Task<IActionResult> Strategy12(DateOnly date)
+        {
+            var result = await _stockService.Strategy12(date);
+            return Ok(result);
+        }
+        /// <summary>
+        /// 布林上、季線多頭且當天漲幅3%以上或前一天漲停
+        /// </summary>
+        /// <param name="date"></param>
+        /// <returns></returns>
+        [HttpGet]
+        public async Task<IActionResult> Strategy14(DateOnly date)
+        {
+            var result = await _stockService.Strategy14(date);
+            return Ok(result);
+        }
+        /// <summary>
+        ///  與strategy14類似，但是布林跟ma20差距在10%以內(通道緊縮)
+        /// </summary>
+        /// <param name="date"></param>
+        /// <returns></returns>
+        [HttpGet]
+        public async Task<IActionResult> Strategy15(DateOnly date)
+        {
+            var result = await _stockService.Strategy15(date);
             return Ok(result);
         }
     }

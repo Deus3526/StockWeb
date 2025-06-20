@@ -6,10 +6,11 @@ namespace TimerForUpdateStockDayInfo
 {
     internal class Program
     {
+        private const int periodMintue = 5;
         static async Task Main(string[] args)
         {
             HttpClient client = new HttpClient();
-            var timer = new Timer(1000 * 60 * 2); // 10分鐘觸發一次
+            var timer = new Timer(1000 * 60 * periodMintue); // 10分鐘觸發一次
             Console.WriteLine("Press Enter to exit...");
             await AsyncOperation(client, timer);
             timer.Elapsed += async (sender, e) => await AsyncOperation(client, timer);
@@ -32,13 +33,13 @@ namespace TimerForUpdateStockDayInfo
                 }
                 else
                 {
-                    Console.WriteLine("回應狀態碼失敗，15分鐘後再試一次");
+                    Console.WriteLine($"回應狀態碼失敗，{periodMintue}分鐘後再試一次");
                     //timer.Stop();
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine("發生錯誤，15分鐘後再試一次");
+                Console.WriteLine($"發生錯誤，{periodMintue}分鐘後再試一次");
                 Console.WriteLine(ex);
                 //timer.Stop();
             }
