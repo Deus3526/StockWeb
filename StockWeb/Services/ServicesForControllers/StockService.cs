@@ -873,6 +873,12 @@ namespace StockWeb.Services.ServicesForControllers
             var q = await _db.Database.SqlQuery<Strategy15ViewModel>($"exec Strategy15 @date={date} ").ToListAsync();
             return q;
         }
+
+        public async Task<List<Strategy16ViewModel>> Strategy16(DateOnly date)
+        {
+            var q = await _db.Database.SqlQuery<Strategy16ViewModel>($"exec Strategy16 @date={date} ").ToListAsync();
+            return q;
+        }
         #endregion
 
     }

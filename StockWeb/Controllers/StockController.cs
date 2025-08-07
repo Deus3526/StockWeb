@@ -149,5 +149,17 @@ namespace StockWeb.Controllers
             var result = await _stockService.Strategy15(date);
             return Ok(result);
         }
+
+        /// <summary>
+        /// 與strategy 15類似，但是半年內均線都在布林軌道內
+        /// </summary>
+        /// <param name="date"></param>
+        /// <returns></returns>
+        [HttpGet]
+        public async Task<IActionResult> Strategy16(DateOnly date)
+        {
+            var result = await _stockService.Strategy16(date);
+            return Ok(result);
+        }
     }
 }
