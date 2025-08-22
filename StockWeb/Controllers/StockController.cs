@@ -161,5 +161,16 @@ namespace StockWeb.Controllers
             var result = await _stockService.Strategy16(date);
             return Ok(result);
         }
+        /// <summary>
+        /// 布林內收盤創60日實體新高 + 上軌離MA20 5%~25%
+        /// </summary>
+        /// <param name="date"></param>
+        /// <returns></returns>
+        [HttpGet]
+        public async Task<IActionResult> Strategy17(DateOnly date)
+        {
+            var result = await _stockService.Strategy17(date);
+            return Ok(result);
+        }
     }
 }

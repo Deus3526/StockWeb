@@ -6,7 +6,7 @@ namespace TimerForUpdateStockDayInfo
 {
     internal class Program
     {
-        private const int periodMintue = 5;
+        private const int periodMintue = 3;
         static async Task Main(string[] args)
         {
             HttpClient client = new HttpClient();
