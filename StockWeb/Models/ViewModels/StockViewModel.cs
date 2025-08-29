@@ -106,6 +106,24 @@
         public double 掛買 => 收盤價 * 1.03;
         public double 掛賣 => 收盤價 * 1.06;
     }
+    public class Strategy18ViewModel
+    {
+        public required string StockName { get; set; }
+        public int StockId { get; set; }
+        public DateOnly Date { get; set; }
+        public double 收盤價 { get; set; }
+        public double 掛買 => 收盤價 * 1.03;
+        public double 掛賣 => 收盤價 * 1.06;
+    }
+    public class Strategy19ViewModel
+    {
+        public required string StockName { get; set; }
+        public int StockId { get; set; }
+        public DateOnly Date { get; set; }
+        public double 收盤價 { get; set; }
+        public double 掛買 => 收盤價 * 1.03;
+        public double 掛賣 => 收盤價 * 1.06;
+    }
     public class StrategyStockBreakoutBollingWithMa60Response
     {
         public int StockId { get; set; }

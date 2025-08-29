@@ -172,5 +172,27 @@ namespace StockWeb.Controllers
             var result = await _stockService.Strategy17(date);
             return Ok(result);
         }
+        /// <summary>
+        /// 當日收盤創60日實體新高，昨日日K為跌，且布林上軌與MA20距離 > 5%
+        /// </summary>
+        /// <param name="date"></param>
+        /// <returns></returns>
+        [HttpGet]
+        public async Task<IActionResult> Strategy18(DateOnly date)
+        {
+            var result = await _stockService.Strategy18(date);
+            return Ok(result);
+        }
+        /// <summary>
+        /// 當日收盤創60日實體新高，且當日漲幅>9%，布林上軌與MA20距離>5%
+        /// </summary>
+        /// <param name="date"></param>
+        /// <returns></returns>
+        [HttpGet]
+        public async Task<IActionResult> Strategy19(DateOnly date)
+        {
+            var result = await _stockService.Strategy19(date);
+            return Ok(result);
+        }
     }
 }
