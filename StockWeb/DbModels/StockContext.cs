@@ -29,9 +29,9 @@ public partial class StockContext : DbContext
 
     public virtual DbSet<月營收> 月營收s { get; set; }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Data Source=.;User ID=sa;Password=Test.123;Initial Catalog=Stock;TrustServerCertificate=true");
+    //protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+//#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
+//        => optionsBuilder.UseSqlServer("Data Source=.;User ID=sa;Password=Test.123;Initial Catalog=Stock;TrustServerCertificate=true");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -79,6 +79,7 @@ public partial class StockContext : DbContext
             entity.HasIndex(e => new { e.Date, e.StockId }, "NonClusteredIndex-20240225-001850");
 
             entity.Property(e => e.Date).HasComment("測試測試");
+            entity.Property(e => e.DataType).HasMaxLength(20);
 
             entity.HasOne(d => d.Stock).WithMany(p => p.StockDayInfos)
                 .HasForeignKey(d => d.StockId)

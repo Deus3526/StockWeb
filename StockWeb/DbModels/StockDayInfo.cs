@@ -68,5 +68,7 @@ public partial class StockDayInfo
 
     public double 本益比 { get; set; }
 
+    //public string DataType { get; set; } = null!;
+
     public virtual StockBaseInfo Stock { get; set; } = null!;
 }

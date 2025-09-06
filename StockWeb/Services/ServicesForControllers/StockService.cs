@@ -72,6 +72,16 @@ namespace StockWeb.Services.ServicesForControllers
             return;
         }
 
+        /// <summary>
+        /// 更新當天的即時股價
+        /// </summary>
+        /// <returns></returns>
+        [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
+        public virtual async Task UpdateStockDayInfoTempToday()
+        {
+            return;
+        }
+
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
         protected virtual async Task 更新上市股票基本訊息_計算流通張數(ConcurrentDictionary<int, StockBaseInfo> concurrentBaseInfos)
         {
@@ -153,7 +163,7 @@ namespace StockWeb.Services.ServicesForControllers
         /// <returns></returns>
         public virtual async Task UpdateStockDayInfoByDate(DateOnly date)
         {
-            var concurrentDayInfos = await _db.StockBaseInfos.AsNoTracking().Select(s => new StockDayInfo { StockId = s.StockId, Date = date }).ToConcurrentDictionaryAsync(s => s.StockId, s => s);
+            var concurrentDayInfos = await _db.StockBaseInfos.AsNoTracking().Select(s => new StockDayInfo { StockId = s.StockId, Date = date,DataType=StockDayInfoDataTypeEnum.盤後 }).ToConcurrentDictionaryAsync(s => s.StockId, s => s);
             var baseInfos = await _db.StockBaseInfos.AsNoTracking().ToDictionaryAsync(s => s.StockId, s => s);
             List<Task> tasks =
             [

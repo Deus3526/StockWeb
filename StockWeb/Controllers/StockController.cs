@@ -40,6 +40,17 @@ namespace StockWeb.Controllers
             return NoContent();
         }
 
+        /// <summary>
+        ///更新當天的即時股價
+        /// </summary>
+        /// <returns></returns>
+        [HttpPost]
+        public async Task<ActionResult> UpdateStockDayInfoTempToday()
+        {
+            await _stockService.UpdateStockDayInfoTempToday();
+            return NoContent();
+        }
+
         [HttpPost]
         public async Task<ActionResult> UpdateDividendYield()
         {

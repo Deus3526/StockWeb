@@ -14,6 +14,13 @@ namespace StockWeb.DbModels
                     .HasMaxLength(3)
                     .IsUnicode(false);
             });
+            modelBuilder.Entity<StockDayInfo>(entity =>
+            {
+                entity.Property(e => e.DataType)
+                    .HasConversion(e => e.ToString(), e => Enum.Parse<StockDayInfoDataTypeEnum>(e))
+                    .HasMaxLength(20)
+                    .IsUnicode(false);
+            });
         }
     }
 }
