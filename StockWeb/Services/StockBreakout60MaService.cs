@@ -19,7 +19,7 @@ namespace StockWeb.Services
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            _eventBus.Subscribe<UpdateDayInfoEvent>(RecordStockBreakout60Table);
+            //_eventBus.Subscribe<UpdateDayInfoEvent>(RecordStockBreakout60Table);
             return Task.CompletedTask;
         }
 

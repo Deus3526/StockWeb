@@ -19,7 +19,7 @@ namespace StockWeb.DbModels
                 entity.Property(e => e.DataType)
                     .HasConversion(e => e.ToString(), e => Enum.Parse<StockDayInfoDataTypeEnum>(e))
                     .HasMaxLength(20)
-                    .IsUnicode(false);
+                    .IsUnicode(true);
             });
         }
     }

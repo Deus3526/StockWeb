@@ -54,6 +54,8 @@ namespace StockWeb.StartUpConfigure
         public required OpenapiTwseContent OpenapiTwse { get; init; }
         [Required,ValidateObjectMembers]
         public required TpexContent Tpex { get; init; }
+        [Required]
+        public required string DayInfoTempUrl { get; init; }
 
 
         #region 內部模型

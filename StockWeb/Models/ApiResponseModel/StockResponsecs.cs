@@ -279,6 +279,45 @@ namespace StockWeb.Models.ApiResponseModel
         public string? strDate { get; set; }
         public string? endDate { get; set; }
     }
+
+    // MIS 即時資料 (https://mis.twse.com.tw/stock/api/getStockInfo.jsp?json=1&delay=0&ex_ch=tse_1101.tw|otc_6488.tw)
+    public class Mis即時股價回傳結果
+    {
+        public List<Mis即時股價項目>? msgArray { get; set; }
+        public int? userDelay { get; set; }
+        public string? rtcode { get; set; }
+        public string? rtmessage { get; set; }
+        public MisQueryTime? queryTime { get; set; }
+        public string? referer { get; set; }
+        public int? cachedAlive { get; set; }
+    }
+
+    public class MisQueryTime
+    {
+        public string? sysDate { get; set; }
+        public string? sysTime { get; set; }
+        public string? sessionFrom { get; set; }
+        public string? sessionLatest { get; set; }
+        public string? sessionTo { get; set; }
+        public string? sessionStr { get; set; }
+    }
+
+    public class Mis即時股價項目
+    {
+        // 常見欄位: c(代碼) n(名稱) z(當盤成交價) o(開) h(高) l(低) y(昨收) v(累積成交量), tv(當盤成交量)
+        public string? c { get; set; }
+        public string? n { get; set; }
+        public string? z { get; set; }
+        public string? o { get; set; }
+        public string? h { get; set; }
+        public string? l { get; set; }
+        public string? y { get; set; }
+        public string? v { get; set; }
+        public string? tv { get; set; }
+        public string? ex { get; set; }
+        public string? tlong { get; set; }
+        public string? d { get; set; }
+    }
     public class 月營收資訊
     {
         [Name("資料年月")]

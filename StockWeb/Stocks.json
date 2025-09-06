@@ -33,6 +33,6 @@
         "上櫃股票基本訊息_發行股數": "web/stock/aftertrading/daily_mktval/mkt_result.php"
       }
     },
-    "DayInfoTempUrl": "https://mis.twse.com.tw/stock/api/getStockInfo.jsp" //?json=1&delay=0&ex_ch=tse_1101.tw|tse_1101B.tw|tse_1102.tw|tse_1103.tw|tse_1104.tw|tse_1108.tw|tse_1109.tw|tse_1110.tw|
+    "DayInfoTempUrl": "https://mis.twse.com.tw/stock/api/getStockInfo.jsp"
   }
 }

@@ -79,6 +79,79 @@ namespace StockWeb.Services.ServicesForControllers
         [LoggingInterceptor(StatusCode = StatusCodes.Status502BadGateway)]
         public virtual async Task UpdateStockDayInfoTempToday()
         {
+            // 取得所有股票清單，組 ex_ch 參數: tse_1101.tw|otc_6488.tw
+            var baseInfos = await _db.StockBaseInfos.AsNoTracking().ToDictionaryAsync(s => s.StockId, s => s);
+            if (baseInfos.Count == 0) return;
+
+            // MIS 一次查詢長度有限，分批組裝
+            const int batchSize = 150; // 保守
+            var stockKeys = baseInfos.Select(b => (b.Key, b.Value.StockType))
+                .Select(x => (x.Key, market: x.StockType == StockTypeEnum.tse ? "tse" : "otc"))
+                .Select(x => $"{x.market}_{x.Key}.tw").ToList();
+
+            var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+            var tasks = new List<Task<List<StockDayInfo>>>();
+            for (int i = 0; i < stockKeys.Count; i += batchSize)
+            {
+                var skip = i;
+                var slice = stockKeys.Skip(skip).Take(batchSize).ToArray();
+                tasks.Add(Task.Run(async () =>
+                {
+                    var list = new List<StockDayInfo>();
+                    var ex_ch_local = string.Join('|', slice);
+                    var query = new Dictionary<string, string?>
+                    {
+                        { "json", "1" },
+                        { "delay", "0" },
+                        { "ex_ch", ex_ch_local }
+                    };
+                    _logger.LogInformation($"更新當天即時資訊  : {skip}~{skip+batchSize}");
+                    var res = await _requestApiService.GetFromJsonByAbsoluteUrlAsync<StockWeb.Models.ApiResponseModel.Mis即時股價回傳結果>(_stockSource.DayInfoTempUrl, query, nameof(UpdateStockDayInfoTempToday));
+                    if (res.msgArray == null || res.msgArray.Count == 0) return list;
+
+                    foreach (var item in res.msgArray)
+                    {
+                        if (string.IsNullOrWhiteSpace(item.c)) continue;
+                        if (!int.TryParse(item.c, out int stockId)) continue;
+                        if (!baseInfos.ContainsKey(stockId)) continue;
+
+                        var baseInfo = baseInfos[stockId];
+                        double last = item.z.ToDouble();
+                        double open = item.o.ToDouble();
+                        double high = item.h.ToDouble();
+                        double low = item.l.ToDouble();
+                        double 平盤價 = item.y.ToDouble();
+                        int vol = (int)decimal.Parse(item.v ?? "0");
+
+                        var dayInfo = new StockDayInfo
+                        {
+                            StockId = stockId,
+                            Date = DateOnly.ParseExact(item.d!, "yyyyMMdd"),
+                            DataType = StockDayInfoDataTypeEnum.即時,
+                            收盤價 = last,
+                            開盤價 = open,
+                            最高價 = high,
+                            最低價 = low,
+                            成交量 = vol,
+                            平盤價 = 平盤價,
+                            漲幅 = (last - 平盤價) / 平盤價,
+                            周轉率 = baseInfo.StockAmount == 0 ? 0 : Convert.ToDouble(vol) / baseInfo.StockAmount,
+                            本益比 = 0
+                        };
+                        list.Add(dayInfo);
+                    }
+                    return list;
+                }));
+            }
+
+            var results = await Task.WhenAll(tasks);
+            var upserts = results.SelectMany(x => x).ToList();
+            if (upserts.Count == 0) return;
+
+            // 寫入：同一天的即時資料先刪再插，避免重覆
+            await DeleteDayInfoRange(today, today);
+            await _db.BulkInsertAsync(upserts);
+            //_ = _eventBus.PublishAsync(new UpdateDayInfoEvent { Date = today });
             return;
         }
 
@@ -145,11 +218,11 @@ namespace StockWeb.Services.ServicesForControllers
             DateOnly? date = null;  //如果Db完全沒有日成交資料，從2021/01/04開始計算
             if (isHistoricalUpdate)
             {
-                date = await _db.StockDayInfos.MinAsync(s => (DateOnly?)s.Date);
+                date = await _db.StockDayInfos.Where(x=>x.DataType==StockDayInfoDataTypeEnum.盤後).MinAsync(s => (DateOnly?)s.Date);
             }
             else
             {
-                date = await _db.StockDayInfos.MaxAsync(s => (DateOnly?)s.Date);
+                date = await _db.StockDayInfos.Where(x=>x.DataType==StockDayInfoDataTypeEnum.盤後).MaxAsync(s => (DateOnly?)s.Date);
             }
             if (date == null) date = new DateOnly(2021, 1, 4);  //如果Db完全沒有日成交資料，從2021/01/04開始計算
             return date.Value;

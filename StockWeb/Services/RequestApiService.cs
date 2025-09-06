@@ -39,6 +39,24 @@ namespace StockWeb.Services
             return res;
         }
 
+        public async Task<T> GetFromJsonByAbsoluteUrlAsync<T>(string absoluteUrl, IDictionary<string, string?>? queryParams = null, string? httpLogMessage = null)
+        {
+            ArgumentNullException.ThrowIfNullOrEmpty(absoluteUrl);
+            if (queryParams != null)
+            {
+                absoluteUrl = QueryHelpers.AddQueryString(absoluteUrl, queryParams);
+            }
+
+            using var client = _httpClientFactory.CreateClient();
+            var requestMessage = new HttpRequestMessage(HttpMethod.Get, absoluteUrl);
+            requestMessage.Options.Set(new HttpRequestOptionsKey<string?>(ConstString.HttpLogMessage), httpLogMessage);
+            var response = await client.SendAsync(requestMessage);
+            response.EnsureSuccessStatusCode();
+            var res = await response.Content.ReadFromJsonAsync<T>();
+            ArgumentNullException.ThrowIfNull(res);
+            return res;
+        }
+
         public async Task<T> PostFromJsonAsync<T>(
             string httpClientName,
             string route,
