@@ -205,5 +205,16 @@ namespace StockWeb.Controllers
             var result = await _stockService.Strategy19(date);
             return Ok(result);
         }
+        /// <summary>
+        /// 當日收盤創60日實體新高，且布林上軌與MA20距離 > 5%（無需昨日日K為跌），成交值門檻 100*2000
+        /// </summary>
+        /// <param name="date"></param>
+        /// <returns></returns>
+        [HttpGet]
+        public async Task<IActionResult> Strategy20(DateOnly date)
+        {
+            var result = await _stockService.Strategy20(date);
+            return Ok(result);
+        }
     }
 }

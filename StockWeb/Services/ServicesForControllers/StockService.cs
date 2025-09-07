@@ -977,6 +977,45 @@ namespace StockWeb.Services.ServicesForControllers
             var q = await _db.Database.SqlQuery<Strategy19ViewModel>($"exec Strategy19 @date={date} ").ToListAsync();
             return q;
         }
+        public async Task<List<Strategy20ViewModel>> Strategy20(DateOnly date)
+        {
+            // 依實際交易日取得：目標日 + 前兩個交易日（含當日，共3天，按新到舊）
+            var dates = await 取得含當日之前的最近N個交易日(date, 3);
+            if (dates.Count == 0) return new List<Strategy20ViewModel>();
+
+            var d0 = dates[0];
+            var d1 = dates[1];
+            var d2 = dates[2];
+
+            //var t0 = _db.Database.SqlQuery<Strategy20ViewModel>($"exec Strategy20 @date={d0} ").ToListAsync();
+            //var t1= _db.Database.SqlQuery<Strategy20ViewModel>($"exec Strategy20 @date={d1} ").ToListAsync();
+            //var t2= _db.Database.SqlQuery<Strategy20ViewModel>($"exec Strategy20 @date={d2} ").ToListAsync();
+
+            //var r0 = await t0;
+            //var r1 = await t1;
+            //var r2 = await t2;
+            var r0 = await _db.Database.SqlQuery<Strategy20ViewModel>($"exec Strategy20 @date={d0} ").ToListAsync();
+            var r1 = await _db.Database.SqlQuery<Strategy20ViewModel>($"exec Strategy20 @date={d1} ").ToListAsync();
+            var r2 = await _db.Database.SqlQuery<Strategy20ViewModel>($"exec Strategy20 @date={d2} ").ToListAsync();
+
+            // 只輸出「當日創新高」且「前兩個交易日未出現」的股票，再過濾漲幅 <= 9.5%
+            var prevSet = new HashSet<int>(r1.Select(x => x.StockId).Concat(r2.Select(x => x.StockId)));
+            var todayOnly = r0.Where(x => !prevSet.Contains(x.StockId) && x.漲幅 <= 0.095).ToList();
+
+            return todayOnly;
+        }
+
+        private async Task<List<DateOnly>> 取得含當日之前的最近N個交易日(DateOnly date, int n)
+        {
+            var dates = await _db.MarketDayInfos
+                .Where(m => m.Date <= date)
+                .OrderByDescending(m => m.Date)
+                .Select(m => m.Date)
+                .Take(n)
+                .ToListAsync();
+
+            return dates;
+        }
         #endregion
 
     }
