@@ -84,7 +84,7 @@ namespace StockWeb.Services.ServicesForControllers
             if (baseInfos.Count == 0) return;
 
             // MIS 一次查詢長度有限，分批組裝
-            const int batchSize = 150; // 保守
+            const int batchSize = 100; // 保守
             var stockKeys = baseInfos.Select(b => (b.Key, b.Value.StockType))
                 .Select(x => (x.Key, market: x.StockType == StockTypeEnum.tse ? "tse" : "otc"))
                 .Select(x => $"{x.market}_{x.Key}.tw").ToList();
@@ -95,6 +95,7 @@ namespace StockWeb.Services.ServicesForControllers
             {
                 var skip = i;
                 var slice = stockKeys.Skip(skip).Take(batchSize).ToArray();
+                //await Task.Delay(TimeSpan.FromSeconds(3));
                 tasks.Add(Task.Run(async () =>
                 {
                     var list = new List<StockDayInfo>();
@@ -105,7 +106,7 @@ namespace StockWeb.Services.ServicesForControllers
                         { "delay", "0" },
                         { "ex_ch", ex_ch_local }
                     };
-                    _logger.LogInformation($"更新當天即時資訊  : {skip}~{skip+batchSize}");
+                    _logger.LogInformation($"更新當天即時資訊  : {skip}~{skip + batchSize}");
                     var res = await _requestApiService.GetFromJsonByAbsoluteUrlAsync<StockWeb.Models.ApiResponseModel.Mis即時股價回傳結果>(_stockSource.DayInfoTempUrl, query, nameof(UpdateStockDayInfoTempToday));
                     if (res.msgArray == null || res.msgArray.Count == 0) return list;
 
@@ -116,7 +117,14 @@ namespace StockWeb.Services.ServicesForControllers
                         if (!baseInfos.ContainsKey(stockId)) continue;
 
                         var baseInfo = baseInfos[stockId];
-                        double last = item.z.ToDouble();
+                        double last = (
+                            item.z == "-"
+                                ? (item.pz == "-"
+                                        ? item.b.Split("_")[0]   // 沒有成交就抓買一價
+                                        : item.pz                // 有前一筆成交價就用前一筆
+                                )
+                                : item.z                     // 有最新成交價就用最新
+                        ).ToDouble();
                         double open = item.o.ToDouble();
                         double high = item.h.ToDouble();
                         double low = item.l.ToDouble();
@@ -218,11 +226,11 @@ namespace StockWeb.Services.ServicesForControllers
             DateOnly? date = null;  //如果Db完全沒有日成交資料，從2021/01/04開始計算
             if (isHistoricalUpdate)
             {
-                date = await _db.StockDayInfos.Where(x=>x.DataType==StockDayInfoDataTypeEnum.盤後).MinAsync(s => (DateOnly?)s.Date);
+                date = await _db.StockDayInfos.Where(x => x.DataType == StockDayInfoDataTypeEnum.盤後).MinAsync(s => (DateOnly?)s.Date);
             }
             else
             {
-                date = await _db.StockDayInfos.Where(x=>x.DataType==StockDayInfoDataTypeEnum.盤後).MaxAsync(s => (DateOnly?)s.Date);
+                date = await _db.StockDayInfos.Where(x => x.DataType == StockDayInfoDataTypeEnum.盤後).MaxAsync(s => (DateOnly?)s.Date);
             }
             if (date == null) date = new DateOnly(2021, 1, 4);  //如果Db完全沒有日成交資料，從2021/01/04開始計算
             return date.Value;
@@ -236,7 +244,7 @@ namespace StockWeb.Services.ServicesForControllers
         /// <returns></returns>
         public virtual async Task UpdateStockDayInfoByDate(DateOnly date)
         {
-            var concurrentDayInfos = await _db.StockBaseInfos.AsNoTracking().Select(s => new StockDayInfo { StockId = s.StockId, Date = date,DataType=StockDayInfoDataTypeEnum.盤後 }).ToConcurrentDictionaryAsync(s => s.StockId, s => s);
+            var concurrentDayInfos = await _db.StockBaseInfos.AsNoTracking().Select(s => new StockDayInfo { StockId = s.StockId, Date = date, DataType = StockDayInfoDataTypeEnum.盤後 }).ToConcurrentDictionaryAsync(s => s.StockId, s => s);
             var baseInfos = await _db.StockBaseInfos.AsNoTracking().ToDictionaryAsync(s => s.StockId, s => s);
             List<Task> tasks =
             [
@@ -980,12 +988,12 @@ namespace StockWeb.Services.ServicesForControllers
         public async Task<List<Strategy20ViewModel>> Strategy20(DateOnly date)
         {
             // 依實際交易日取得：目標日 + 前兩個交易日（含當日，共3天，按新到舊）
-            var dates = await 取得含當日之前的最近N個交易日(date, 3);
+            var dates = await 取得不含當日之前的最近N個交易日(date, 2);
             if (dates.Count == 0) return new List<Strategy20ViewModel>();
 
-            var d0 = dates[0];
-            var d1 = dates[1];
-            var d2 = dates[2];
+            var d0 = date;
+            var d1 = dates[0];
+            var d2 = dates[1];
 
             //var t0 = _db.Database.SqlQuery<Strategy20ViewModel>($"exec Strategy20 @date={d0} ").ToListAsync();
             //var t1= _db.Database.SqlQuery<Strategy20ViewModel>($"exec Strategy20 @date={d1} ").ToListAsync();
@@ -1005,10 +1013,10 @@ namespace StockWeb.Services.ServicesForControllers
             return todayOnly;
         }
 
-        private async Task<List<DateOnly>> 取得含當日之前的最近N個交易日(DateOnly date, int n)
+        private async Task<List<DateOnly>> 取得不含當日之前的最近N個交易日(DateOnly date, int n)
         {
             var dates = await _db.MarketDayInfos
-                .Where(m => m.Date <= date)
+                .Where(m => m.Date < date)
                 .OrderByDescending(m => m.Date)
                 .Select(m => m.Date)
                 .Take(n)

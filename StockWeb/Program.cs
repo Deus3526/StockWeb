@@ -40,7 +40,7 @@ namespace StockWeb
                 {
                     //options.UseSqlServer(builder.Configuration.GetConnectionString("Stock"));
                     var connectionStrings = serviceProvider.GetRequiredService<IOptions<ConnectionStrings>>().Value;
-                    options.UseSqlServer(connectionStrings.Stock, sqlOptions => sqlOptions.CommandTimeout(60));
+                    options.UseSqlServer(connectionStrings.Stock, sqlOptions => sqlOptions.CommandTimeout(180));
                 });
                 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
                 builder.Services.AddEndpointsApiExplorer();

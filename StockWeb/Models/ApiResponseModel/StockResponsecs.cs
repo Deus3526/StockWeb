@@ -317,6 +317,8 @@ namespace StockWeb.Models.ApiResponseModel
         public string? ex { get; set; }
         public string? tlong { get; set; }
         public string? d { get; set; }
+        public string? b { get; set; }
+        public string? pz { get; set; }
     }
     public class 月營收資訊
     {
