@@ -138,6 +138,20 @@
         public double? NextDayCloseChangePct { get; set; }
         public double 漲幅 { get; set; }
     }
+    public class Strategy21ViewModel
+    {
+        public required string StockName { get; set; }
+        public int StockId { get; set; }
+        public DateOnly Date { get; set; }
+        public double 收盤價 { get; set; }
+        public double 漲幅 { get; set; }
+        public int 成交量 { get; set; }
+        public double? MA20 { get; set; }
+        public double? MA60 { get; set; }
+        public double? MA120 { get; set; }
+        public double? MA240 { get; set; }
+        public int? PrevVolume { get; set; }
+    }
     public class StrategyStockBreakoutBollingWithMa60Response
     {
         public int StockId { get; set; }

@@ -206,7 +206,7 @@ namespace StockWeb.Services.ServicesForControllers
         /// </summary>
         /// <param name="isHistoricalUpdate"></param>
         /// <returns></returns>
-        public async Task UpdateStockDayInfo(bool isHistoricalUpdate)
+        public async Task<DateOnly> UpdateStockDayInfo(bool isHistoricalUpdate)
         {
             DateOnly date = await GetDateMaxOrMinFromStockDayInfoAsync(isHistoricalUpdate);
             date = await 取得與參數日期最近的開市日期_若無資料則更新上市大盤盤後資訊(date);
@@ -215,6 +215,7 @@ namespace StockWeb.Services.ServicesForControllers
             await UpdateStockDayInfoByDate(date);
 
             _ = _eventBus.PublishAsync(new UpdateDayInfoEvent { Date = date });
+            return date;
         }
         /// <summary>
         /// 取得StockDayInfo最小或最大的交易日期
@@ -993,7 +994,7 @@ namespace StockWeb.Services.ServicesForControllers
 
             var d0 = date;
             var d1 = dates[0];
-            var d2 = dates[1];
+            //var d2 = dates[1];
 
             //var t0 = _db.Database.SqlQuery<Strategy20ViewModel>($"exec Strategy20 @date={d0} ").ToListAsync();
             //var t1= _db.Database.SqlQuery<Strategy20ViewModel>($"exec Strategy20 @date={d1} ").ToListAsync();
@@ -1004,13 +1005,22 @@ namespace StockWeb.Services.ServicesForControllers
             //var r2 = await t2;
             var r0 = await _db.Database.SqlQuery<Strategy20ViewModel>($"exec Strategy20 @date={d0} ").ToListAsync();
             var r1 = await _db.Database.SqlQuery<Strategy20ViewModel>($"exec Strategy20 @date={d1} ").ToListAsync();
-            var r2 = await _db.Database.SqlQuery<Strategy20ViewModel>($"exec Strategy20 @date={d2} ").ToListAsync();
+            //var r2 = await _db.Database.SqlQuery<Strategy20ViewModel>($"exec Strategy20 @date={d2} ").ToListAsync();
 
             // 只輸出「當日創新高」且「前兩個交易日未出現」的股票，再過濾漲幅 <= 9.5%
-            var prevSet = new HashSet<int>(r1.Select(x => x.StockId).Concat(r2.Select(x => x.StockId)));
-            var todayOnly = r0.Where(x => !prevSet.Contains(x.StockId) && x.漲幅 <= 0.095).ToList();
+            //var prevSet = new HashSet<int>(r1.Select(x => x.StockId).Concat(r2.Select(x => x.StockId)));
+            var prevSet = new HashSet<int>(r1.Select(x => x.StockId));
+            var todayOnly = r0.Where(x => !prevSet.Contains(x.StockId) && x.漲幅 <= 0.09).ToList();
+            
+
 
             return todayOnly;
+        }
+
+        public async Task<List<Strategy21ViewModel>> Strategy21(DateOnly startDate, DateOnly endDate)
+        {
+            var result = await _db.Database.SqlQuery<Strategy21ViewModel>($"exec Strategy21 @StartDate={startDate}, @EndDate={endDate}").ToListAsync();
+            return result;
         }
 
         private async Task<List<DateOnly>> 取得不含當日之前的最近N個交易日(DateOnly date, int n)

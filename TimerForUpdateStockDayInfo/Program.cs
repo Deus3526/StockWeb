@@ -6,7 +6,7 @@ namespace TimerForUpdateStockDayInfo
 {
     internal class Program
     {
-        private const int periodMintue = 3;
+        private const int periodMintue = 1;
         static async Task Main(string[] args)
         {
             HttpClient client = new HttpClient();
@@ -30,6 +30,8 @@ namespace TimerForUpdateStockDayInfo
                 if (response.IsSuccessStatusCode)
                 {
                     Console.WriteLine("取得回應成功");
+                    var date=await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"更新日期 : {date}");
                 }
                 else
                 {

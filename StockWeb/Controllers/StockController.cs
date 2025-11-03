@@ -36,8 +36,8 @@ namespace StockWeb.Controllers
         public async Task<ActionResult> UpdateStockDayInfo(UpdateStockDayInfoParm parm)
         {
             //throw new NotImplementedException();
-            await _stockService.UpdateStockDayInfo(parm.IsHistoricalUpdate!.Value);
-            return NoContent();
+            var date=await _stockService.UpdateStockDayInfo(parm.IsHistoricalUpdate!.Value);
+            return Ok(date);
         }
 
         /// <summary>
@@ -214,6 +214,19 @@ namespace StockWeb.Controllers
         public async Task<IActionResult> Strategy20(DateOnly date)
         {
             var result = await _stockService.Strategy20(date);
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// 隔日沖策略：收盤站上MA20、MA60且漲幅>1%，量縮至前一日80%以下並達指定量能門檻
+        /// </summary>
+        /// <param name="startDate"></param>
+        /// <param name="endDate"></param>
+        /// <returns></returns>
+        [HttpGet]
+        public async Task<IActionResult> Strategy21(DateOnly startDate, DateOnly endDate)
+        {
+            var result = await _stockService.Strategy21(startDate, endDate);
             return Ok(result);
         }
     }
