@@ -1011,7 +1011,7 @@ namespace StockWeb.Services.ServicesForControllers
             //var prevSet = new HashSet<int>(r1.Select(x => x.StockId).Concat(r2.Select(x => x.StockId)));
             var prevSet = new HashSet<int>(r1.Select(x => x.StockId));
             var todayOnly = r0.Where(x => !prevSet.Contains(x.StockId) && x.漲幅 <= 0.09).ToList();
-            
+
 
 
             return todayOnly;
@@ -1021,6 +1021,30 @@ namespace StockWeb.Services.ServicesForControllers
         {
             var result = await _db.Database.SqlQuery<Strategy21ViewModel>($"exec Strategy21 @StartDate={startDate}, @EndDate={endDate}").ToListAsync();
             return result;
+        }
+
+        public async Task<BacktestNextDayStrategyResponse> BacktestNextDayStrategy(DateOnly startDate, DateOnly endDate, string strategyName)
+        {
+            HashSet<(int StockId, DateOnly Date)> strategyResult = strategyName switch
+            {
+                "strategy21" => (await Strategy21(startDate, endDate))
+                    .Select(x => (x.StockId, x.Date))
+                    .ToHashSet(),
+                _ => throw new ArgumentException($"尚未支援的隔日沖策略：{strategyName}")
+            };
+
+            var dayInfoWithNext = await _db.Database.SqlQuery<BacktestNextDayStrategyViewModel>($"exec BacktestNextDayStrategy @StartDate={startDate}, @EndDate={endDate}").ToListAsync();
+
+            var matched = dayInfoWithNext
+                .Where(d => strategyResult.Contains((d.StockId, d.Date)))
+                .ToHashSet();
+            var response = new BacktestNextDayStrategyResponse
+            {
+                AllMatchData = matched,
+                WinData = matched.Where(x => x.NextHighChangePct >= 0.04).ToHashSet()
+            };
+
+            return response;
         }
 
         private async Task<List<DateOnly>> 取得不含當日之前的最近N個交易日(DateOnly date, int n)

@@ -36,7 +36,7 @@ namespace StockWeb.Controllers
         public async Task<ActionResult> UpdateStockDayInfo(UpdateStockDayInfoParm parm)
         {
             //throw new NotImplementedException();
-            var date=await _stockService.UpdateStockDayInfo(parm.IsHistoricalUpdate!.Value);
+            var date = await _stockService.UpdateStockDayInfo(parm.IsHistoricalUpdate!.Value);
             return Ok(date);
         }
 
@@ -227,6 +227,13 @@ namespace StockWeb.Controllers
         public async Task<IActionResult> Strategy21(DateOnly startDate, DateOnly endDate)
         {
             var result = await _stockService.Strategy21(startDate, endDate);
+            return Ok(result);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> BacktestNextDayStrategy(DateOnly startDate, DateOnly endDate, string strategyName)
+        {
+            var result = await _stockService.BacktestNextDayStrategy(startDate, endDate, strategyName);
             return Ok(result);
         }
     }
