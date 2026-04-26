@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
 using StockWeb.Models.RequestParms;
 using StockWeb.Services;
@@ -228,6 +228,51 @@ namespace StockWeb.Controllers
         {
             var result = await _stockService.Strategy21(startDate, endDate);
             return Ok(result);
+        }
+
+        /// <summary>
+        /// 收盤突破MA60且不爆量，站上MA10、MA20並符合量能門檻
+        /// </summary>
+        /// <param name="date"></param>
+        /// <returns></returns>
+        [HttpGet]
+        public async Task<IActionResult> Strategy22(DateOnly date)
+        {
+            var result = await _stockService.Strategy22(date);
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// 多頭回檔踩MA10收回，且MA10/MA20/MA60乖離達標並為紅K
+        /// </summary>
+        /// <param name="date"></param>
+        /// <returns></returns>
+        [HttpGet]
+        public async Task<IActionResult> Strategy23(DateOnly date)
+        {
+            var result = await _stockService.Strategy23(date);
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// 突破MA10或MA20，均線多頭排列且突破前20日最大量日收盤價但不爆量
+        /// </summary>
+        /// <param name="date"></param>
+        /// <returns></returns>
+        [HttpGet]
+        public async Task<IActionResult> Strategy24(DateOnly date)
+        {
+            var result = await _stockService.Strategy24(date);
+            return Ok(new
+            {
+                Count = result.Count,
+                Result = result.Select(x => new
+                {
+                    x.StockId,
+                    x.StockName
+                }),
+                DetailResult = result
+            });
         }
 
         [HttpGet]

@@ -1,4 +1,4 @@
-﻿using EFCore.BulkExtensions;
+using EFCore.BulkExtensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
@@ -1020,6 +1020,24 @@ namespace StockWeb.Services.ServicesForControllers
         public async Task<List<Strategy21ViewModel>> Strategy21(DateOnly startDate, DateOnly endDate)
         {
             var result = await _db.Database.SqlQuery<Strategy21ViewModel>($"exec Strategy21 @StartDate={startDate}, @EndDate={endDate}").ToListAsync();
+            return result;
+        }
+
+        public async Task<List<Strategy22ViewModel>> Strategy22(DateOnly date)
+        {
+            var result = await _db.Database.SqlQuery<Strategy22ViewModel>($"exec Strategy22 @date={date}").ToListAsync();
+            return result;
+        }
+
+        public async Task<List<Strategy23ViewModel>> Strategy23(DateOnly date)
+        {
+            var result = await _db.Database.SqlQuery<Strategy23ViewModel>($"exec Strategy23 @date={date}").ToListAsync();
+            return result;
+        }
+
+        public async Task<List<Strategy24ViewModel>> Strategy24(DateOnly date)
+        {
+            var result = await _db.Database.SqlQuery<Strategy24ViewModel>($"exec Strategy24 @date={date}").ToListAsync();
             return result;
         }
 

@@ -1,4 +1,4 @@
-﻿namespace StockWeb.Models.ViewModels
+namespace StockWeb.Models.ViewModels
 {
     public abstract class StockViewModelBase
     {
@@ -151,6 +151,53 @@
         public double? MA120 { get; set; }
         public double? MA240 { get; set; }
         public int? PrevVolume { get; set; }
+    }
+    public class Strategy22ViewModel
+    {
+        public required string StockName { get; set; }
+        public int StockId { get; set; }
+        public DateOnly Date { get; set; }
+        public double 收盤價 { get; set; }
+        public int 成交量 { get; set; }
+        public double? MA10 { get; set; }
+        public double? MA20 { get; set; }
+        public double? MA60 { get; set; }
+        public int? PrevVolume { get; set; }
+        public double? PrevClose { get; set; }
+        public double? PrevMA60 { get; set; }
+    }
+    public class Strategy23ViewModel
+    {
+        public required string StockName { get; set; }
+        public int StockId { get; set; }
+        public double 漲幅 { get; set; }
+        public int 成交量 { get; set; }
+        public double 收盤價 { get; set; }
+    }
+
+    public class Strategy24ViewModel
+    {
+        public required string StockName { get; set; }
+        public int StockId { get; set; }
+        public DateOnly Date { get; set; }
+        public double 漲幅 { get; set; }
+        public double 收盤價 { get; set; }
+        public int 成交量 { get; set; }
+        public double? MA10 { get; set; }
+        public double? MA20 { get; set; }
+        public double? MA60 { get; set; }
+        public double? MA120 { get; set; }
+        public int? PrevVolume { get; set; }
+        public double? PrevClose { get; set; }
+        public double? PrevMA10 { get; set; }
+        public double? PrevMA20 { get; set; }
+        public double? PrevMA60 { get; set; }
+        public double? MinLowIn60Days { get; set; }
+        public double? MaxHighIn60Days { get; set; }
+        public double? HighLowChangePctIn60Days { get; set; }
+        public DateOnly? MaxVolumeDateIn20Days { get; set; }
+        public int? MaxVolumeIn20Days { get; set; }
+        public double? MaxVolumeCloseIn20Days { get; set; }
     }
 
     public class BacktestNextDayStrategyViewModel
