@@ -11,7 +11,12 @@
   <ItemGroup>
     <!-- 官方 OpenAPI 產生 + Swagger UI（SwaggerUI.OpenApi，專案內無 Swashbuckle 套件相依） -->
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.8" />
+    <PackageReference Include="NLog.Web.AspNetCore" Version="6.1.3" />
     <PackageReference Include="SwaggerUI.OpenApi" Version="2.5.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="nlog.config" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- 尚無 AspectCore 套件與相依型別，先排除編譯以免阻擋建置 -->
