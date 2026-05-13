@@ -200,6 +200,29 @@ namespace StockWeb.Models.ViewModels
         public double? MaxVolumeCloseIn20Days { get; set; }
     }
 
+    public class Strategy25ViewModel
+    {
+        public required string StockName { get; set; }
+        public int StockId { get; set; }
+        public DateOnly Date { get; set; }
+        public double 漲幅 { get; set; }
+        public double 收盤價 { get; set; }
+        public int 成交量 { get; set; }
+        public double? MA60 { get; set; }
+        public double? MA120 { get; set; }
+        public int? PrevVolume { get; set; }
+        public double? PrevClose { get; set; }
+        public int? ConsolidationDays { get; set; }
+        public double? ConsolidationMA15 { get; set; }
+        public double? MinCloseIn15Days { get; set; }
+        public double? MaxCloseIn15Days { get; set; }
+        public int? InRangeDays { get; set; }
+        public int? PrevDayInRange { get; set; }
+        public double? MaxDeviationFromMA15 { get; set; }
+        public double? CloseToConsolidationMA15Pct { get; set; }
+        public double? BreakoutFromMaxCloseIn15DaysPct { get; set; }
+    }
+
     public class BacktestNextDayStrategyViewModel
     {
         public DateOnly Date { get; set; }

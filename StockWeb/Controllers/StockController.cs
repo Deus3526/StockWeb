@@ -275,6 +275,27 @@ namespace StockWeb.Controllers
             });
         }
 
+        /// <summary>
+        /// 15日盤整後突破
+        /// </summary>
+        /// <param name="date"></param>
+        /// <returns></returns>
+        [HttpGet]
+        public async Task<IActionResult> Strategy25(DateOnly date)
+        {
+            var result = await _stockService.Strategy25(date);
+            return Ok(new
+            {
+                Count = result.Count,
+                Result = result.Select(x => new
+                {
+                    x.StockId,
+                    x.StockName
+                }),
+                DetailResult = result
+            });
+        }
+
         [HttpGet]
         public async Task<IActionResult> BacktestNextDayStrategy(DateOnly startDate, DateOnly endDate, string strategyName)
         {

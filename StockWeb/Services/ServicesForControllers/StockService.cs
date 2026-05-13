@@ -1041,6 +1041,12 @@ namespace StockWeb.Services.ServicesForControllers
             return result;
         }
 
+        public async Task<List<Strategy25ViewModel>> Strategy25(DateOnly date)
+        {
+            var result = await _db.Database.SqlQuery<Strategy25ViewModel>($"exec Strategy25 @date={date}").ToListAsync();
+            return result;
+        }
+
         public async Task<BacktestNextDayStrategyResponse> BacktestNextDayStrategy(DateOnly startDate, DateOnly endDate, string strategyName)
         {
             HashSet<(int StockId, DateOnly Date)> strategyResult = strategyName switch
