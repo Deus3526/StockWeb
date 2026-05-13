@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 官方 OpenAPI 產生 + Swagger UI（SwaggerUI.OpenApi，專案內無 Swashbuckle 套件相依） -->
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.8" />
+    <PackageReference Include="SwaggerUI.OpenApi" Version="2.5.0" />
+  </ItemGroup>
+
+  <!-- 尚無 AspectCore 套件與相依型別，先排除編譯以免阻擋建置 -->
+  <ItemGroup>
+    <Compile Remove="StartUpConfigure\AspectCoreConfigure.cs" />
+  </ItemGroup>
+
+</Project>
