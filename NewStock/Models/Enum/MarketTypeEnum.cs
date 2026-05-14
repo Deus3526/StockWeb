@@ -1,9 +1,8 @@
-namespace NewStock.Models.Enum
+namespace NewStock.Models.Enum;
+
+public enum MarketTypeEnum
 {
-    public enum MarketTypeEnum
-    {
-        Unkown = 0,
-        上市,
-        上櫃
-    }
+    Unknown = 0,
+    上市 = 1,
+    上櫃 = 2,
 }

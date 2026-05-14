@@ -1,10 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using NewStock.Models.Enum;
 
 namespace NewStock.EFModels;
 
-public partial class NewStockContext : DbContext
+public class NewStockContext : DbContext
 {
     public NewStockContext(DbContextOptions<NewStockContext> options)
         : base(options)
@@ -18,10 +17,11 @@ public partial class NewStockContext : DbContext
         modelBuilder.Entity<StockInfo>(entity =>
         {
             entity.Property(e => e.StockId).ValueGeneratedNever();
+
+            entity.Property(e => e.MarketType)
+                .HasConversion(
+                    v => v.ToString(),
+                    v => Enum.Parse<MarketTypeEnum>(v));
         });
-
-        OnModelCreatingPartial(modelBuilder);
     }
-
-    partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }

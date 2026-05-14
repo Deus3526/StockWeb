@@ -1,5 +1,8 @@
-using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using NewStock.EFModels;
 using NewStock.Middleware;
 using NLog;
 using NLog.Web;
@@ -23,6 +26,9 @@ namespace NewStock
             });
             builder.Services.AddOpenApi();
             builder.Services.AddSwaggerUI();
+
+            builder.Services.AddDbContext<NewStockContext>(options =>
+                options.UseSqlServer(builder.Configuration.GetConnectionString("NewStock")));
 
             var app = builder.Build();
             var logger = app.Services.GetRequiredService<ILogger<Program>>();
