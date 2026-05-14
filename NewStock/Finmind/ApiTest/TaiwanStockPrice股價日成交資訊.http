@@ -1,5 +1,5 @@
 ﻿@stockId = 2603
-@date = 2026-05-11
+@date = 2026-05-04
 
 # 單一個股日成交資訊
 GET {{$dotenv Domain}}/data?dataset=TaiwanStockPrice&data_id={{stockId}}&start_date={{date}}&end_date={{date}}
@@ -9,3 +9,22 @@ GET {{$dotenv Domain}}/data?dataset=TaiwanStockPrice&data_id={{stockId}}&start_d
 # 所有個股日成交資訊
 GET {{$dotenv Domain}}/data?dataset=TaiwanStockPrice&start_date={{date}}&end_date={{date}}
 Authorization: Bearer {{$processEnv Finmind__Token}}
+
+# {
+#   "msg": "success",
+#   "status": 200,
+#   "data": [
+#     {
+#       "date": "2026-05-04",
+#       "stock_id": "2603",
+#       "Trading_Volume": 13725270,
+#       "Trading_money": 2833997567,
+#       "open": 202.0,
+#       "max": 208.5,
+#       "min": 202.0,
+#       "close": 206.0,
+#       "spread": 4.0,
+#       "Trading_turnover": 13356
+#     }
+#   ]
+# }

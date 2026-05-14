@@ -18,4 +18,6 @@ public class StockInfo
 
     [StringLength(32)]
     public MarketTypeEnum MarketType { get; set; }
+
+    public virtual ICollection<StockDayInfo> StockDayInfos { get; set; } = new List<StockDayInfo>();
 }

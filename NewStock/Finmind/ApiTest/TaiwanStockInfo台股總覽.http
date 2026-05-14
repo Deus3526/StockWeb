@@ -2,3 +2,17 @@
 
 GET {{$dotenv Domain}}/data?dataset=TaiwanStockInfo
 Accept: application/json
+
+
+# {
+#   "msg": "success",
+#   "status": 200,
+#   "data": [
+#     {
+#       "industry_category": "造紙工業",
+#       "stock_id": "1902",
+#       "stock_name": "台紙",
+#       "type": "twse",
+#       "date": "2020-06-01"
+#     }...]
+# }    
