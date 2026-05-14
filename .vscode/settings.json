@@ -1,10 +1,19 @@
 {
   "files.encoding": "utf8",
   "files.autoGuessEncoding": false,
-  "files.eol": "\r\n",
-  "[csharp]": { "files.encoding": "utf8" },
-  "[sql]": { "files.encoding": "utf8" },
-  "[json]": { "files.encoding": "utf8" },
-  "[markdown]": { "files.encoding": "utf8" },
-  "[http]": { "files.encoding": "utf8" }
+  "[csharp]": {
+    "files.encoding": "utf8"
+  },
+  "[json]": {
+    "files.encoding": "utf8"
+  },
+  "[sql]": {
+    "files.encoding": "utf8"
+  },
+  "[http]": {
+    "files.encoding": "utf8"
+  },
+  "[markdown]": {
+    "files.encoding": "utf8"
+  }
 }

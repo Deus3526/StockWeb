@@ -1,12 +1,12 @@
+# https://editorconfig.org
 root = true
 
 [*]
 charset = utf-8
-end_of_line = crlf
 insert_final_newline = true
 
-[*.{cs,csproj}]
+[*.{cs,csx,csproj,vb}]
 charset = utf-8
 
-[*.{sql,json,http,env}]
+[*.{json,sql,http,md,props,targets}]
 charset = utf-8

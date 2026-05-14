@@ -26,7 +26,7 @@ namespace NewStock.Middleware
                     message = env.IsDevelopment() ? ex.Message : "伺服器發生錯誤。"
                 };
 
-                await context.Response.WriteAsJsonAsync(payload).ConfigureAwait(false);
+                await context.Response.WriteAsJsonAsync(payload);
             }
         }
     }

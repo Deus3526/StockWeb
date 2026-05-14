@@ -1,0 +1,21 @@
+---
+description: Windows 上避免 C# 等原始檔被存成 UTF-16 導致 dotnet build（CS1056、'\0'）
+globs: "**/*.{cs,csproj,csx}"
+alwaysApply: true
+---
+
+# 原始檔編碼（UTF-8）
+
+在本 repo 修改 `*.cs` / `*.csproj` 時，`Write` / `StrReplace` 工具有時會把檔案存成 **UTF-16**，Roslyn 會當成 UTF-8 讀取而出現 **CS1056 未預期的字元 `\0`**。
+
+請這樣處理：
+
+1. **優先**：對「整檔取代」使用 PowerShell，強制 **UTF-8 無 BOM**：
+   ```powershell
+   $utf8 = [System.Text.UTF8Encoding]::new($false)
+   [System.IO.File]::WriteAllText("path\to\File.cs", @'
+   ...完整內容...
+   '@, $utf8)
+   ```
+2. **若仍用了 Write / StrReplace**：改完後執行 `dotnet build`；若出現 CS1056，將該檔用上述方式 **整檔覆寫為 UTF-8**。
+3. 勿依賴「使用者手動另存編碼」作為唯一修正；代理應自行確保檔案可編譯。

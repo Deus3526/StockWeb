@@ -28,5 +28,9 @@
   <ItemGroup>
     <Compile Remove="StartUpConfigure\AspectCoreConfigure.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="EFModels\Migrations\" />
+    <Folder Include="Finmind\Models\" />
+  </ItemGroup>
 
 </Project>

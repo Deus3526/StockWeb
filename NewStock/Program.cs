@@ -3,7 +3,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NewStock.EFModels;
+using NewStock.Finmind;
 using NewStock.Middleware;
+using NewStock.Services;
 using NLog;
 using NLog.Web;
 using System.Text.Json;
@@ -29,6 +31,12 @@ namespace NewStock
 
             builder.Services.AddDbContext<NewStockContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("NewStock")));
+
+            builder.Services.AddHttpContextAccessor();
+
+            builder.Services.Configure<FinmindConfig>(builder.Configuration.GetSection(FinmindConfig.SectionName));
+            builder.Services.AddHttpClient<FinmindApiClient>();
+            builder.Services.AddScoped<UpdateService>();
 
             var app = builder.Build();
             var logger = app.Services.GetRequiredService<ILogger<Program>>();
