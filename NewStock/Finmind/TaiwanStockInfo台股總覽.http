@@ -1,0 +1,4 @@
+﻿### TaiwanStockInfo — v4 Data
+
+GET {{$dotenv Domain}}/data?dataset=TaiwanStockInfo
+Accept: application/json

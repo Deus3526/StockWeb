@@ -1,0 +1,11 @@
+﻿@stockId = 2603
+@date = 2026-05-11
+
+# 單一個股日成交資訊
+GET {{$dotenv Domain}}/data?dataset=TaiwanStockPrice&data_id={{stockId}}&start_date={{date}}&end_date={{date}}
+
+###
+
+# 所有個股日成交資訊
+GET {{$dotenv Domain}}/data?dataset=TaiwanStockPrice&start_date={{date}}&end_date={{date}}
+Authorization: Bearer {{$processEnv Finmind__Token}}

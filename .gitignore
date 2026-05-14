@@ -364,3 +364,4 @@ FodyWeavers.xsd
 /StockWeb/appsettings.Development.json
 /StockWeb/appsettings.Development.json
 StockWeb/SwaggerApi.xml
+CursorData
