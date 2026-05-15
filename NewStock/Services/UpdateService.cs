@@ -104,7 +104,8 @@ public class UpdateService
     /// 僅寫入 <see cref="StockInfo"/> 已存在之 StockId（外鍵）；若 FinMind 回傳之列不在 StockInfo，則略過並於回應附訊息（如下市、新股未同步等基本資料）。
     /// 刪除即時後，表中僅會留下非即時列（正常為盤後）；決定下一個交易日時僅統計「盤後」之最大日期，若無盤後列則見 <see cref="FallbackLatestDateWhenNoStockDayInfo"/>。
     /// 在正常流程下，選出之交易日嚴格晚於上開最大日；接著寫入之盤後列為新一筆。
-    /// FinMind <c>Trading_Volume</c> 為股數，<see cref="StockDayInfo.成交量"/> 存張數（除以 1000），欄位為 <see cref="long"/>。
+    /// FinMind <c>Trading_Volume</c> 為股數，<see cref="StockDayInfo.成交量"/> 存張數（除以 1000），欄位為 <see cref="long"/>；
+    /// <see cref="StockDayInfo.成交筆數"/> 對應 FinMind <c>Trading_turnover</c>。
     /// 平盤價／漲幅見 <see cref="TaiwanStockPriceResponse.平盤價"/>／<see cref="TaiwanStockPriceResponse.漲幅"/> 與 <see cref="TaiwanStockPriceResponse.Spread"/>。
     /// </remarks>
     public async Task<UpdateStockDayInfoResult> UpdateStockDayInfoAsync()
@@ -153,6 +154,7 @@ public class UpdateService
                 最低價 = dto.Low,
                 收盤價 = dto.Close,
                 成交量 = dto.TradingVolume / 1000L,
+                成交筆數 = dto.TradingTurnover,
                 漲幅 = dto.漲幅,
                 平盤價 = dto.平盤價,
             });

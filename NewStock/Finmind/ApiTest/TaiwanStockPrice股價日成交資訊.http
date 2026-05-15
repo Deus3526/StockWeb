@@ -28,3 +28,4 @@ Authorization: Bearer {{$processEnv Finmind__Token}}
 #     }
 #   ]
 # }
+# Trading_turnover = 成交筆數（StockDayInfo.成交筆數）

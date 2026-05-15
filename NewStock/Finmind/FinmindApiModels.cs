@@ -93,6 +93,7 @@ public sealed class TaiwanStockPriceResponse : BaseStockResponse
     [JsonIgnore]
     public double 漲幅 => 平盤價 > 0 ? Spread / 平盤價 : 0;
 
+    /// <summary>成交筆數；FinMind 欄位名為 <c>Trading_turnover</c>。</summary>
     [JsonPropertyName("Trading_turnover")]
     public long TradingTurnover { get; set; }
 }

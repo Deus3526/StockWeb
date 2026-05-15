@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using NewStock.Models.Enum;
 
@@ -31,6 +31,9 @@ public class StockDayInfo
 
     /// <summary>張數（或與 StockWeb 對齊之口徑）。</summary>
     public long 成交量 { get; set; }
+
+    /// <summary>當日成交筆數（FinMind <c>Trading_turnover</c>）。</summary>
+    public long 成交筆數 { get; set; }
 
     [ForeignKey(nameof(StockId))]
     public virtual StockInfo Stock { get; set; } = null!;
