@@ -247,6 +247,172 @@ public class UpdateService
             Inserted: inserted,
             SkippedExisting: skippedExisting);
     }
+
+    /// <summary>
+    /// FinMind <c>TaiwanStockWeekPrice</c>（<paramref name="date"/> 須為該根週 K 之週一）置換 <see cref="周月K資料表"/>：先刪除庫中同年月日且 <see cref="StockKBarTimeTypeEnum.Week"/> 之列，再自 API 全量插入（僅 <see cref="StockInfo"/> 已存在之代號）；寫入之 <see cref="周月K資料表.Date"/> 為 API 列之 <c>date</c>。
+    /// </summary>
+    /// <remarks>刪除發生在呼叫 FinMind 之前；若之後 API 失敗，該週區間在庫中會暫為空，請留意重跑。</remarks>
+    public async Task<UpdateStockPeriodKResult> UpdateTaiwanStockWeekKAsync(DateOnly date)
+    {
+        var cancellationToken = _httpContextAccessor.HttpContext?.RequestAborted ?? CancellationToken.None;
+
+        if (date == default)
+            throw new HttpStatusCodeException(StatusCodes.Status400BadRequest, "請提供 date（yyyy-MM-dd），不可為 default。");
+
+        if (date.DayOfWeek != DayOfWeek.Monday)
+        {
+            throw new HttpStatusCodeException(
+                StatusCodes.Status400BadRequest,
+                $"週 K 的 date 須為該週星期一，目前為「{date.DayOfWeek:G}」({date:yyyy-MM-dd})。");
+        }
+
+        const StockKBarTimeTypeEnum timeType = StockKBarTimeTypeEnum.Week;
+
+        await _db.周月K資料表s
+            .Where(e => e.Date == date && e.TimeType == timeType)
+            .ExecuteDeleteAsync(cancellationToken);
+
+        var rows = await _finmindApiClient.GetTaiwanStockWeekPriceAsync(date, cancellationToken);
+
+        var allowedStockIds =
+            await _db.StockInfos.AsNoTracking().Select(s => s.StockId).ToHashSetAsync(cancellationToken);
+
+        var inserted = 0;
+        var skippedNotInStockInfo = 0;
+        var skippedStockIds = new HashSet<short>();
+
+        foreach (var dto in rows)
+        {
+            var stockId = dto.StockIdShort;
+            if (!allowedStockIds.Contains(stockId))
+            {
+                skippedNotInStockInfo++;
+                skippedStockIds.Add(stockId);
+                continue;
+            }
+
+            _db.周月K資料表s.Add(new 周月K資料表
+            {
+                StockId = stockId,
+                Date = dto.Date,
+                TimeType = timeType,
+                開盤價 = dto.Open,
+                最高價 = dto.High,
+                最低價 = dto.Low,
+                收盤價 = dto.Close,
+                平盤價 = dto.平盤價,
+                漲幅 = dto.漲幅,
+                交易筆數 = dto.TradingTurnover,
+                DataType = StockDayInfoDataTypeEnum.盤後,
+            });
+            inserted++;
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
+
+        string? message = null;
+        if (skippedNotInStockInfo > 0)
+        {
+            message =
+                $"已略過 {skippedNotInStockInfo} 筆 TaiwanStockWeekPrice 列（{skippedStockIds.Count} 個不重複代號未見於 StockInfo；可視需要執行 UpdateStockInfo）。";
+            if (skippedStockIds.Count <= 30)
+                message += " 代號：" + string.Join(",", skippedStockIds.Order());
+        }
+
+        _logger.LogInformation($"FinMind TaiwanStockWeekPrice：PeriodStart={date:yyyy-MM-dd}, ApiRows={rows.Count}, Inserted={inserted}, Updated=0, SkippedNotInStockInfo={skippedNotInStockInfo}");
+
+        return new UpdateStockPeriodKResult(
+            PeriodStart: date,
+            TimeType: timeType,
+            ApiRowCount: rows.Count,
+            Inserted: inserted,
+            Updated: 0,
+            SkippedNotInStockInfo: skippedNotInStockInfo,
+            Message: message);
+    }
+
+    /// <summary>
+    /// FinMind <c>TaiwanStockMonthPrice</c>（<paramref name="date"/> 須為每月 1 號）置換 <see cref="周月K資料表"/>：先刪除同年月日且 <see cref="StockKBarTimeTypeEnum.Month"/> 之列，再自 API 全量插入；欄位對應同 <see cref="UpdateTaiwanStockWeekKAsync"/>（寫入之 <see cref="周月K資料表.Date"/> 為 API 列之 <c>date</c>）。
+    /// </summary>
+    /// <remarks>刪除發生在呼叫 FinMind 之前；若之後 API 失敗，該月區間在庫中會暫為空，請留意重跑。</remarks>
+    public async Task<UpdateStockPeriodKResult> UpdateTaiwanStockMonthKAsync(DateOnly date)
+    {
+        var cancellationToken = _httpContextAccessor.HttpContext?.RequestAborted ?? CancellationToken.None;
+
+        if (date == default)
+            throw new HttpStatusCodeException(StatusCodes.Status400BadRequest, "請提供 date（yyyy-MM-dd），不可為 default。");
+
+        if (date.Day != 1)
+        {
+            throw new HttpStatusCodeException(
+                StatusCodes.Status400BadRequest,
+                $"月 K 的 date 須為每月 1 號，目前為 {date:yyyy-MM-dd}。");
+        }
+
+        const StockKBarTimeTypeEnum timeType = StockKBarTimeTypeEnum.Month;
+
+        await _db.周月K資料表s
+            .Where(e => e.Date == date && e.TimeType == timeType)
+            .ExecuteDeleteAsync(cancellationToken);
+
+        var rows = await _finmindApiClient.GetTaiwanStockMonthPriceAsync(date, cancellationToken);
+
+        var allowedStockIds =
+            await _db.StockInfos.AsNoTracking().Select(s => s.StockId).ToHashSetAsync(cancellationToken);
+
+        var inserted = 0;
+        var skippedNotInStockInfo = 0;
+        var skippedStockIds = new HashSet<short>();
+
+        foreach (var dto in rows)
+        {
+            var stockId = dto.StockIdShort;
+            if (!allowedStockIds.Contains(stockId))
+            {
+                skippedNotInStockInfo++;
+                skippedStockIds.Add(stockId);
+                continue;
+            }
+
+            _db.周月K資料表s.Add(new 周月K資料表
+            {
+                StockId = stockId,
+                Date = dto.Date,
+                TimeType = timeType,
+                開盤價 = dto.Open,
+                最高價 = dto.High,
+                最低價 = dto.Low,
+                收盤價 = dto.Close,
+                平盤價 = dto.平盤價,
+                漲幅 = dto.漲幅,
+                交易筆數 = dto.TradingTurnover,
+                DataType = StockDayInfoDataTypeEnum.盤後,
+            });
+            inserted++;
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
+
+        string? message = null;
+        if (skippedNotInStockInfo > 0)
+        {
+            message =
+                $"已略過 {skippedNotInStockInfo} 筆 TaiwanStockMonthPrice 列（{skippedStockIds.Count} 個不重複代號未見於 StockInfo；可視需要執行 UpdateStockInfo）。";
+            if (skippedStockIds.Count <= 30)
+                message += " 代號：" + string.Join(",", skippedStockIds.Order());
+        }
+
+        _logger.LogInformation($"FinMind TaiwanStockMonthPrice：PeriodStart={date:yyyy-MM-dd}, ApiRows={rows.Count}, Inserted={inserted}, Updated=0, SkippedNotInStockInfo={skippedNotInStockInfo}");
+
+        return new UpdateStockPeriodKResult(
+            PeriodStart: date,
+            TimeType: timeType,
+            ApiRowCount: rows.Count,
+            Inserted: inserted,
+            Updated: 0,
+            SkippedNotInStockInfo: skippedNotInStockInfo,
+            Message: message);
+    }
 }
 
 public sealed record UpdateStockInfoResult(
@@ -272,3 +438,16 @@ public sealed record UpdateTaiwanTradingDaysResult(
     int TradingDayCount,
     int Inserted,
     int SkippedExisting);
+
+/// <summary>
+/// <see cref="UpdateService.UpdateTaiwanStockWeekKAsync"/>／<see cref="UpdateService.UpdateTaiwanStockMonthKAsync"/> 之摘要；
+/// <see cref="Updated"/> 於週／月 K 為置換寫入（先刪後插），固定為 0。
+/// </summary>
+public sealed record UpdateStockPeriodKResult(
+    DateOnly PeriodStart,
+    StockKBarTimeTypeEnum TimeType,
+    int ApiRowCount,
+    int Inserted,
+    int Updated,
+    int SkippedNotInStockInfo,
+    string? Message);

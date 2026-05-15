@@ -1,0 +1,25 @@
+@date1 = 2026-03-09
+# 參數要是星期一那個日期
+GET {{$dotenv Domain}}/data?dataset=TaiwanStockWeekPrice&start_date={{date1}}&stock_id=2330
+Authorization: Bearer {{$processEnv Finmind__Token}}
+
+
+# {
+#   "msg": "success",
+#   "status": 200,
+#   "data": [
+#     {
+#       "stock_id": "0050",
+#       "yweek": "2026W11",
+#       "max": 78.5,
+#       "min": 71.65,
+#       "trading_volume": 1114529321,
+#       "trading_money": 83239291931,
+#       "trading_turnover": 1285207,
+#       "date": "2026-03-09",
+#       "close": 75.95,
+#       "open": 73.15,
+#       "spread": -0.9
+#     }
+#   ]
+

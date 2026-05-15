@@ -17,12 +17,6 @@ public sealed class FinmindApiClient
         _configFinmind = options.Value;
     }
 
-    private string BuildDataUrl(Dictionary<string, string?> query)
-    {
-        var baseUri = $"{_configFinmind.Domain.TrimEnd('/')}/data";
-        return QueryHelpers.AddQueryString(baseUri, query);
-    }
-
     /// <summary>
     /// TaiwanStockInfo：過濾為上市／上櫃且 stock_id 長度為 4。
     /// <para>
@@ -31,10 +25,9 @@ public sealed class FinmindApiClient
     /// </summary>
     public async Task<IReadOnlyList<TaiwanStockInfoResponse>> GetTaiwanStockInfoAsync(CancellationToken cancellationToken)
     {
-        var url = BuildDataUrl(new Dictionary<string, string?>
-        {
-            ["dataset"] = "TaiwanStockInfo",
-        });
+        var url = QueryHelpers.AddQueryString(
+            $"{_configFinmind.Domain}/data",
+            new Dictionary<string, string?> { ["dataset"] = "TaiwanStockInfo" });
         using var response = await _httpClient.GetAsync(url, cancellationToken);
         response.EnsureSuccessStatusCode();
 
@@ -59,12 +52,14 @@ public sealed class FinmindApiClient
     /// </summary>
     public async Task<IReadOnlyList<TaiwanStockPriceResponse>> GetTaiwanStockPriceForTradingDayAsync(DateOnly tradingDay, CancellationToken cancellationToken)
     {
-        var url = BuildDataUrl(new Dictionary<string, string?>
-        {
-            ["dataset"] = "TaiwanStockPrice",
-            ["start_date"] = tradingDay.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-            ["end_date"] = tradingDay.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-        });
+        var url = QueryHelpers.AddQueryString(
+            $"{_configFinmind.Domain}/data",
+            new Dictionary<string, string?>
+            {
+                ["dataset"] = "TaiwanStockPrice",
+                ["start_date"] = tradingDay.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                ["end_date"] = tradingDay.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            });
 
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Authorization =
@@ -96,12 +91,14 @@ public sealed class FinmindApiClient
         if (endDate < startDate)
             throw new ArgumentOutOfRangeException(nameof(endDate), "endDate 不得小於 startDate。");
 
-        var url = BuildDataUrl(new Dictionary<string, string?>
-        {
-            ["dataset"] = "TaiwanStockTradingDate",
-            ["start_date"] = startDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-            ["end_date"] = endDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-        });
+        var url = QueryHelpers.AddQueryString(
+            $"{_configFinmind.Domain}/data",
+            new Dictionary<string, string?>
+            {
+                ["dataset"] = "TaiwanStockTradingDate",
+                ["start_date"] = startDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                ["end_date"] = endDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            });
 
         using var response = await _httpClient.GetAsync(url, cancellationToken);
         response.EnsureSuccessStatusCode();
@@ -117,6 +114,79 @@ public sealed class FinmindApiClient
             .Select(r => r.Date)
             .Where(d => d != DateOnly.MinValue && d >= startDate && d <= endDate)
             .Distinct()
+            .ToList();
+    }
+
+    /// <summary>
+    /// TaiwanStockWeekPrice：<paramref name="weekStartMonday"/> 須為該根 K 對應之「週一」；<c>start_date</c>／<c>end_date</c> 同該日以取得單一週區間。
+    /// 僅回傳：<see cref="TaiwanStockWeekMonthPriceResponse.Date"/> 等於 <paramref name="weekStartMonday"/>，且通過代號篩選之列。
+    /// </summary>
+    public async Task<IReadOnlyList<TaiwanStockWeekMonthPriceResponse>> GetTaiwanStockWeekPriceAsync(
+        DateOnly weekStartMonday,
+        CancellationToken cancellationToken)
+    {
+        var dateStr = weekStartMonday.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var url = QueryHelpers.AddQueryString(
+            $"{_configFinmind.Domain}/data",
+            new Dictionary<string, string?>
+            {
+                ["dataset"] = "TaiwanStockWeekPrice",
+                ["start_date"] = dateStr,
+                ["end_date"] = dateStr,
+            });
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _configFinmind.Token);
+
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var baseResponse =
+            await response.Content.ReadFromJsonAsync<
+                FinmindBaseResponse<List<TaiwanStockWeekMonthPriceResponse>>>(cancellationToken);
+
+        if (baseResponse is null || baseResponse.Data is null)
+            throw new InvalidOperationException("無法解析 FinMind TaiwanStockWeekPrice 回應或缺少 data。");
+
+        return baseResponse.Data
+            .Where(x => x.Date != DateOnly.MinValue && x.Date == weekStartMonday && x.IsEligibleStock())
+            .ToList();
+    }
+
+    /// <summary>
+    /// TaiwanStockMonthPrice：<paramref name="monthFirstDay"/> 須為該月一日；<c>start_date</c>／<c>end_date</c> 同該日以取得單月區間。
+    /// 僅回傳：<see cref="TaiwanStockWeekMonthPriceResponse.Date"/> 等於 <paramref name="monthFirstDay"/>，且通過代號篩選之列。
+    /// </summary>
+    public async Task<IReadOnlyList<TaiwanStockWeekMonthPriceResponse>> GetTaiwanStockMonthPriceAsync(
+        DateOnly monthFirstDay,
+        CancellationToken cancellationToken)
+    {
+        var dateStr = monthFirstDay.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var url = QueryHelpers.AddQueryString(
+            $"{_configFinmind.Domain}/data",
+            new Dictionary<string, string?>
+            {
+                ["dataset"] = "TaiwanStockMonthPrice",
+                ["start_date"] = dateStr,
+                ["end_date"] = dateStr,
+            });
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Authorization =
+            new AuthenticationHeaderValue("Bearer", _configFinmind.Token);
+
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var baseResponse =
+            await response.Content.ReadFromJsonAsync<
+                FinmindBaseResponse<List<TaiwanStockWeekMonthPriceResponse>>>(cancellationToken);
+
+        if (baseResponse is null || baseResponse.Data is null)
+            throw new InvalidOperationException("無法解析 FinMind TaiwanStockMonthPrice 回應或缺少 data。");
+
+        return baseResponse.Data
+            .Where(x => x.Date != DateOnly.MinValue && x.Date == monthFirstDay && x.IsEligibleStock())
             .ToList();
     }
 }

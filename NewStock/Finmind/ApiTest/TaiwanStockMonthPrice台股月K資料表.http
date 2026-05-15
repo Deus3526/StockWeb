@@ -1,0 +1,24 @@
+@date1 = 2026-03-01
+#參數是每月的1號
+GET {{$dotenv Domain}}/data?dataset=TaiwanStockMonthPrice&start_date={{date1}}
+Authorization: Bearer {{$processEnv Finmind__Token}}
+
+
+# {
+#   "msg": "success",
+#   "status": 200,
+#   "data": [
+#     {
+#       "stock_id": "0050",
+#       "ymonth": "2026M03",
+#       "max": 80.8,
+#       "min": 71.65,
+#       "trading_volume": 4036401996,
+#       "trading_money": 306085081088,
+#       "trading_turnover": 5191615,
+#       "date": "2026-03-01",
+#       "close": 72.35,
+#       "open": 79.5,
+#       "spread": -8.8
+#     }
+#   ]

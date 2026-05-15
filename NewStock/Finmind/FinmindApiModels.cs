@@ -94,7 +94,53 @@ public sealed class TaiwanStockPriceResponse : BaseStockResponse
     public double 漲幅 => 平盤價 > 0 ? Spread / 平盤價 : 0;
 
     [JsonPropertyName("Trading_turnover")]
-    public double TradingTurnover { get; set; }
+    public long TradingTurnover { get; set; }
+}
+
+/// <summary>
+/// FinMind TaiwanStockWeekPrice／TaiwanStockMonthPrice 共通欄位（週 K 有 <c>yweek</c>、月 K 有 <c>ymonth</c>）。
+/// </summary>
+public sealed class TaiwanStockWeekMonthPriceResponse : BaseStockResponse
+{
+    [JsonPropertyName("yweek")]
+    public string? Yweek { get; set; }
+
+    [JsonPropertyName("ymonth")]
+    public string? Ymonth { get; set; }
+
+    [JsonPropertyName("date")]
+    [JsonConverter(typeof(SaveDateOnlyJsonConverter))]
+    public DateOnly Date { get; set; }
+
+    [JsonPropertyName("open")]
+    public double Open { get; set; }
+
+    [JsonPropertyName("max")]
+    public double High { get; set; }
+
+    [JsonPropertyName("min")]
+    public double Low { get; set; }
+
+    [JsonPropertyName("close")]
+    public double Close { get; set; }
+
+    [JsonPropertyName("spread")]
+    public double Spread { get; set; }
+
+    /// <summary>
+    /// 依目前 <see cref="Close"/>、<see cref="Spread"/> 推算「參考價／平盤基準」（元）；與 <see cref="TaiwanStockPriceResponse"/> 相同假設。不會序列化。
+    /// </summary>
+    [JsonIgnore]
+    public double 平盤價 => Close - Spread;
+
+    /// <summary>
+    /// 依目前 <see cref="Close"/>、<see cref="Spread"/> 推算漲跌幅（％以小數計）。不會序列化。
+    /// </summary>
+    [JsonIgnore]
+    public double 漲幅 => 平盤價 > 0 ? Spread / 平盤價 : 0;
+
+    [JsonPropertyName("trading_turnover")]
+    public long TradingTurnover { get; set; }
 }
 
 /// <summary>

@@ -49,4 +49,28 @@ public class UpdateController : ControllerBase
         var result = await _updateService.UpdateTaiwanTradingDaysAsync(dateFrom);
         return Ok(result);
     }
+
+    /// <summary>
+    /// FinMind TaiwanStockWeekPrice：<paramref name="date"/> 為該根 K 對應之週一（yyyy-MM-dd），寫入／更新資料庫週 K。
+    /// </summary>
+    [HttpPost]
+    [ProducesResponseType(typeof(UpdateStockPeriodKResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<UpdateStockPeriodKResult>> UpdateTaiwanStockWeekK([FromQuery] DateOnly date)
+    {
+        var result = await _updateService.UpdateTaiwanStockWeekKAsync(date);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// FinMind TaiwanStockMonthPrice：<paramref name="date"/> 為該根 K 對應之月初（每月 1 號，yyyy-MM-dd），寫入／更新資料庫月 K。
+    /// </summary>
+    [HttpPost]
+    [ProducesResponseType(typeof(UpdateStockPeriodKResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<UpdateStockPeriodKResult>> UpdateTaiwanStockMonthK([FromQuery] DateOnly date)
+    {
+        var result = await _updateService.UpdateTaiwanStockMonthKAsync(date);
+        return Ok(result);
+    }
 }
