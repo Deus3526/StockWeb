@@ -22,7 +22,10 @@ public sealed class FinmindApiClient
     /// </summary>
     public async Task<IReadOnlyList<TaiwanStockInfoResponse>> GetTaiwanStockInfoAsync(CancellationToken cancellationToken)
     {
-        var url = $"{_configFinmind.Domain}/data?dataset=TaiwanStockInfo";
+        var url = BuildDataUrl(new Dictionary<string, string?>
+        {
+            ["dataset"] = "TaiwanStockInfo",
+        });
         using var response = await _httpClient.GetAsync(url, cancellationToken);
         response.EnsureSuccessStatusCode();
 
@@ -35,6 +38,40 @@ public sealed class FinmindApiClient
             .Where(x => x.MarketTypeEnum != MarketTypeEnum.Unknown && x.StockIdShort >= 1000)
             .GroupBy(r => r.StockIdShort)
             .Select(g => g.OrderByDescending(r => r.Date).First())
+            .ToList();
+    }
+    /// <summary>
+    /// TaiwanStockTradingDate：<c>start_date</c>～<c>end_date</c>（含）；回傳區間內有效、去重後之日期（與 ApiTest，不帶 Bearer）。
+    /// </summary>
+    public async Task<IReadOnlyList<DateOnly>> GetTaiwanStockTradingDatesAsync(
+        DateOnly startDate,
+        DateOnly endDate,
+        CancellationToken cancellationToken)
+    {
+        if (endDate < startDate)
+            throw new ArgumentOutOfRangeException(nameof(endDate), "endDate 不得小於 startDate。");
+
+        var url = BuildDataUrl(new Dictionary<string, string?>
+        {
+            ["dataset"] = "TaiwanStockTradingDate",
+            ["start_date"] = startDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            ["end_date"] = endDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+        });
+
+        using var response = await _httpClient.GetAsync(url, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var baseResponse =
+            await response.Content.ReadFromJsonAsync<FinmindBaseResponse<List<TaiwanStockTradingDateResponse>>>(
+                cancellationToken);
+
+        if (baseResponse is null || baseResponse.Data is null)
+            throw new InvalidOperationException("無法解析 FinMind TaiwanStockTradingDate 回應或缺少 data。");
+
+        return baseResponse.Data
+            .Select(r => r.Date)
+            .Where(d => d != DateOnly.MinValue && d >= startDate && d <= endDate)
+            .Distinct()
             .ToList();
     }
 }

@@ -55,4 +55,12 @@ public sealed class TaiwanStockInfoResponse
     [JsonIgnore]
     public short StockIdShort =>
         short.TryParse(StockId, NumberStyles.Integer, CultureInfo.InvariantCulture, out var id) ? id : (short)0;
+/// <summary>
+/// FinMind TaiwanStockTradingDate（台股交易日）單列。
+/// </summary>
+public sealed class TaiwanStockTradingDateResponse
+{
+    [JsonPropertyName("date")]
+    [JsonConverter(typeof(SaveDateOnlyJsonConverter))]
+    public DateOnly Date { get; set; }
 }

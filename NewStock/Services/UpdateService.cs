@@ -77,6 +77,52 @@ public class UpdateService
 
         return new UpdateStockInfoResult(stockCount, inserted, updated, unchanged);
     }
+    /// <summary>
+    /// 自 FinMind TaiwanStockTradingDate 擷取 <paramref name="dateFrom"/> 至今天（本機日期）的交易日寫入 TaiwanTradingDay；已存在之日期略過。
+    /// </summary>
+    public async Task<UpdateTaiwanTradingDaysResult> UpdateTaiwanTradingDaysAsync(DateOnly dateFrom)
+    {
+        var cancellationToken = _httpContextAccessor.HttpContext?.RequestAborted ?? CancellationToken.None;
+
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        if (dateFrom == default)
+            throw new HttpStatusCodeException(StatusCodes.Status400BadRequest, "請提供 dateFrom（yyyy-MM-dd），不可為 default。");
+
+        if (dateFrom > today)
+            throw new HttpStatusCodeException(StatusCodes.Status400BadRequest, "dateFrom 不可大於今天（本機日期）。");
+
+        var tradingDays =
+            await _finmindApiClient.GetTaiwanStockTradingDatesAsync(dateFrom, today, cancellationToken);
+
+        var existingInRange = await _db.TaiwanTradingDays
+            .Where(t => t.Date >= dateFrom && t.Date <= today)
+            .Select(t => t.Date)
+            .ToHashSetAsync(cancellationToken);
+
+        var inserted = 0;
+        foreach (var d in tradingDays)
+        {
+            if (existingInRange.Contains(d))
+                continue;
+
+            _db.TaiwanTradingDays.Add(new TaiwanTradingDay { Date = d });
+            existingInRange.Add(d);
+            inserted++;
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
+
+        var skippedExisting = tradingDays.Count - inserted;
+
+        _logger.LogInformation($"TaiwanStockTradingDate 同步：DateFrom={dateFrom:yyyy-MM-dd}, Today={today:yyyy-MM-dd}, TradingDays={tradingDays.Count}, Inserted={inserted}, SkippedExisting={skippedExisting}");
+
+        return new UpdateTaiwanTradingDaysResult(
+            DateFrom: dateFrom,
+            DateTo: today,
+            TradingDayCount: tradingDays.Count,
+            Inserted: inserted,
+            SkippedExisting: skippedExisting);
+    }
 }
 
 public sealed record UpdateStockInfoResult(
@@ -84,3 +130,9 @@ public sealed record UpdateStockInfoResult(
     int Inserted,
     int Updated,
     int Unchanged);
+public sealed record UpdateTaiwanTradingDaysResult(
+    DateOnly DateFrom,
+    DateOnly DateTo,
+    int TradingDayCount,
+    int Inserted,
+    int SkippedExisting);
