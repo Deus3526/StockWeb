@@ -24,6 +24,19 @@ public class UpdateController : ControllerBase
         var result = await _updateService.UpdateTaiwanStockInfoAsync();
         return Ok(result);
     }
+
+    /// <summary>
+    /// 依 FinMind TaiwanStockPrice 更新 StockDayInfo：自動以目前「盤後」最新日推算下一個 TaiwanTradingDay，必要時先同步交易日曆。
+    /// </summary>
+    [HttpPost]
+    [ProducesResponseType(typeof(UpdateStockDayInfoResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<UpdateStockDayInfoResult>> UpdateStockDayInfo()
+    {
+        var result = await _updateService.UpdateStockDayInfoAsync();
+        return Ok(result);
+    }
+
     /// <summary>
     /// 自 FinMind TaiwanStockTradingDate，將 <paramref name="dateFrom"/>（含）至今天（伺服器本機日期）的交易日寫入 TaiwanTradingDay。
     /// </summary>

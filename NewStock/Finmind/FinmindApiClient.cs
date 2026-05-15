@@ -1,5 +1,8 @@
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Options;
 using NewStock.Models.Enum;
+using System.Globalization;
+using System.Net.Http.Headers;
 
 namespace NewStock.Finmind;
 
@@ -12,6 +15,12 @@ public sealed class FinmindApiClient
     {
         _httpClient = httpClient;
         _configFinmind = options.Value;
+    }
+
+    private string BuildDataUrl(Dictionary<string, string?> query)
+    {
+        var baseUri = $"{_configFinmind.Domain.TrimEnd('/')}/data";
+        return QueryHelpers.AddQueryString(baseUri, query);
     }
 
     /// <summary>
@@ -35,11 +44,47 @@ public sealed class FinmindApiClient
             throw new InvalidOperationException("無法解析 FinMind TaiwanStockInfo 回應或缺少 data。");
 
         return baseResponse.Data
-            .Where(x => x.MarketTypeEnum != MarketTypeEnum.Unknown && x.StockIdShort >= 1000)
+            .Where(x => x.MarketTypeEnum != MarketTypeEnum.Unknown && x.StockId?.Length == 4 && x.StockIdShort >= 1000 && x.StockIdShort <= 9999)
             .GroupBy(r => r.StockIdShort)
             .Select(g => g.OrderByDescending(r => r.Date).First())
             .ToList();
     }
+
+    /// <summary>
+    /// TaiwanStockPrice：不分 <c>data_id</c>（單一交易日）。
+    /// <para>若 FinMind 帳號需 Token，請在設定 <see cref="FinmindConfig.Token"/>；否則可能無法取得成功回應。</para>
+    /// <para>
+    /// 僅回傳：<see cref="TaiwanStockPriceResponse.Date"/> 有效且等於 <paramref name="tradingDay"/>、且 <see cref="TaiwanStockPriceResponse.StockIdShort"/> ≥ 1000 之列（與 <see cref="GetTaiwanStockInfoAsync"/> 之代號篩選對齊）。
+    /// </para>
+    /// </summary>
+    public async Task<IReadOnlyList<TaiwanStockPriceResponse>> GetTaiwanStockPriceForTradingDayAsync(DateOnly tradingDay, CancellationToken cancellationToken)
+    {
+        var url = BuildDataUrl(new Dictionary<string, string?>
+        {
+            ["dataset"] = "TaiwanStockPrice",
+            ["start_date"] = tradingDay.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            ["end_date"] = tradingDay.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+        });
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Authorization =
+            new AuthenticationHeaderValue("Bearer", _configFinmind.Token);
+
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var baseResponse =
+            await response.Content.ReadFromJsonAsync<FinmindBaseResponse<List<TaiwanStockPriceResponse>>>(
+                cancellationToken);
+
+        if (baseResponse is null || baseResponse.Data is null)
+            throw new InvalidOperationException("無法解析 FinMind TaiwanStockPrice 回應或缺少 data。");
+
+        return baseResponse.Data
+            .Where(x => x.Date != DateOnly.MinValue && x.Date == tradingDay && x.StockId?.Length == 4 && x.StockIdShort >= 1000 && x.StockIdShort <= 9999)
+            .ToList();
+    }
+
     /// <summary>
     /// TaiwanStockTradingDate：<c>start_date</c>～<c>end_date</c>（含）；回傳區間內有效、去重後之日期（與 ApiTest，不帶 Bearer）。
     /// </summary>

@@ -5,4 +5,5 @@ public enum MarketTypeEnum
     Unknown = 0,
     上市 = 1,
     上櫃 = 2,
+    興櫃 = 3,
 }

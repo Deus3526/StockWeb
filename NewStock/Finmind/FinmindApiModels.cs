@@ -1,5 +1,5 @@
-using System.Globalization;
 using NewStock.Models.Enum;
+using System.Globalization;
 using System.Text.Json.Serialization;
 
 namespace NewStock.Finmind;
@@ -46,6 +46,7 @@ public sealed class TaiwanStockInfoResponse
         {
             "twse" => MarketTypeEnum.上市,
             "tpex" => MarketTypeEnum.上櫃,
+            "emerging" => MarketTypeEnum.興櫃,
             _ => MarketTypeEnum.Unknown,
         };
 
@@ -55,6 +56,64 @@ public sealed class TaiwanStockInfoResponse
     [JsonIgnore]
     public short StockIdShort =>
         short.TryParse(StockId, NumberStyles.Integer, CultureInfo.InvariantCulture, out var id) ? id : (short)0;
+}
+
+/// <summary>
+/// FinMind TaiwanStockPrice（股價日成交）單列。
+/// </summary>
+public sealed class TaiwanStockPriceResponse
+{
+    [JsonPropertyName("date")]
+    [JsonConverter(typeof(SaveDateOnlyJsonConverter))]
+    public DateOnly Date { get; set; }
+
+    [JsonPropertyName("stock_id")]
+    public string? StockId { get; set; }
+
+    [JsonIgnore]
+    public short StockIdShort =>
+        short.TryParse(StockId, NumberStyles.Integer, CultureInfo.InvariantCulture, out var id) ? id : (short)0;
+
+    [JsonPropertyName("Trading_Volume")]
+    public long TradingVolume { get; set; }
+
+    [JsonPropertyName("Trading_money")]
+    public long TradingMoney { get; set; }
+
+    [JsonPropertyName("open")]
+    public double Open { get; set; }
+
+    [JsonPropertyName("max")]
+    public double High { get; set; }
+
+    [JsonPropertyName("min")]
+    public double Low { get; set; }
+
+    [JsonPropertyName("close")]
+    public double Close { get; set; }
+
+    /// <summary>
+    /// FinMind <c>spread</c>，此處先假設為「收盤與前一交易日參考價（平盤基準）之差」以利推算平盤價／漲幅；若語意不符再調整。
+    /// </summary>
+    [JsonPropertyName("spread")]
+    public double Spread { get; set; }
+
+    /// <summary>
+    /// 依目前 <see cref="Close"/>、<see cref="Spread"/> 推算「參考價／平盤基準」（元）；見 <see cref="Spread"/> 語意假設。不會序列化。
+    /// </summary>
+    [JsonIgnore]
+    public double 平盤價 => Close - Spread;
+
+    /// <summary>
+    /// 依目前 <see cref="Close"/>、<see cref="Spread"/> 推算漲跌幅（％）。不會序列化。
+    /// </summary>
+    [JsonIgnore]
+    public double 漲幅 => 平盤價 > 0 ? Spread / 平盤價 : 0;
+
+    [JsonPropertyName("Trading_turnover")]
+    public double TradingTurnover { get; set; }
+}
+
 /// <summary>
 /// FinMind TaiwanStockTradingDate（台股交易日）單列。
 /// </summary>
