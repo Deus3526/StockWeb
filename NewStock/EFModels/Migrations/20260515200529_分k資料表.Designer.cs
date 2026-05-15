@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NewStock.EFModels;
 
@@ -11,9 +12,11 @@ using NewStock.EFModels;
 namespace NewStock.EFModels.Migrations
 {
     [DbContext(typeof(NewStockContext))]
-    partial class NewStockContextModelSnapshot : ModelSnapshot
+    [Migration("20260515200529_分k資料表")]
+    partial class 分k資料表
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -112,6 +115,9 @@ namespace NewStock.EFModels.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("nvarchar(32)");
 
+                    b.Property<double>("平盤價")
+                        .HasColumnType("float");
+
                     b.Property<long>("成交量")
                         .HasColumnType("bigint");
 
@@ -122,6 +128,9 @@ namespace NewStock.EFModels.Migrations
                         .HasColumnType("float");
 
                     b.Property<double>("最高價")
+                        .HasColumnType("float");
+
+                    b.Property<double>("漲幅")
                         .HasColumnType("float");
 
                     b.Property<double>("開盤價")

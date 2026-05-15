@@ -18,6 +18,8 @@ public class NewStockContext : DbContext
 
     public virtual DbSet<周月K資料表> 周月K資料表s { get; set; }
 
+    public virtual DbSet<分K資料表> 分K資料表s { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<StockInfo>(entity =>
@@ -59,6 +61,21 @@ public class NewStockContext : DbContext
                 .HasConversion(
                     v => v.ToString(),
                     v => Enum.Parse<StockKBarTimeTypeEnum>(v));
+
+            entity.Property(e => e.DataType)
+                .HasConversion(
+                    v => v.ToString(),
+                    v => Enum.Parse<StockDayInfoDataTypeEnum>(v));
+
+            entity.HasOne(d => d.Stock)
+                .WithMany()
+                .HasForeignKey(d => d.StockId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<分K資料表>(entity =>
+        {
+            entity.HasKey(e => new { e.StockId, e.Date, e.分鐘 });
 
             entity.Property(e => e.DataType)
                 .HasConversion(

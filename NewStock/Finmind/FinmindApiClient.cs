@@ -189,4 +189,46 @@ public sealed class FinmindApiClient
             .Where(x => x.Date != DateOnly.MinValue && x.Date == monthFirstDay && x.IsEligibleStock())
             .ToList();
     }
+
+    /// <summary>
+    /// TaiwanStockKBar：<paramref name="date"/> 為單一交易日，<paramref name="stockId"/> 為 <c>data_id</c>（四位代號）；須帶 Bearer。
+    /// 僅回傳：<see cref="TaiwanStockKBarResponse.Date"/> 等於 <paramref name="date"/>、且 <see cref="BaseStockResponse.StockIdShort"/> 等於 <paramref name="stockId"/> 之列。
+    /// </summary>
+    public async Task<IReadOnlyList<TaiwanStockKBarResponse>> GetTaiwanStockKBarAsync(
+        DateOnly date,
+        short stockId,
+        CancellationToken cancellationToken)
+    {
+        var dateStr = date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var four = stockId.ToString("D4", CultureInfo.InvariantCulture);
+        var url = QueryHelpers.AddQueryString(
+            $"{_configFinmind.Domain}/data",
+            new Dictionary<string, string?>
+            {
+                ["dataset"] = "TaiwanStockKBar",
+                ["start_date"] = dateStr,
+                ["data_id"] = four,
+            });
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Authorization =
+            new AuthenticationHeaderValue("Bearer", _configFinmind.Token);
+
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var baseResponse =
+            await response.Content.ReadFromJsonAsync<
+                FinmindBaseResponse<List<TaiwanStockKBarResponse>>>(cancellationToken);
+
+        if (baseResponse is null || baseResponse.Data is null)
+            throw new InvalidOperationException("無法解析 FinMind TaiwanStockKBar 回應或缺少 data。");
+
+        return baseResponse.Data
+            .Where(x =>
+                x.Date != DateOnly.MinValue
+                && x.Date == date
+                && x.StockIdShort == stockId)
+            .ToList();
+    }
 }

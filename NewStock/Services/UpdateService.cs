@@ -3,6 +3,7 @@ using NewStock.EFModels;
 using NewStock.Exceptions;
 using NewStock.Finmind;
 using NewStock.Models.Enum;
+using System.Globalization;
 
 namespace NewStock.Services;
 
@@ -11,7 +12,17 @@ public class UpdateService
     /// <summary>
     /// 與 StockWeb <c>GetDateMaxOrMinFromStockDayInfoAsync</c> 相同：資料庫尚無「盤後」<c>StockDayInfo</c> 時，以此日作為起算前的基準，下一個交易日為嚴格晚於此日之首個營業日。
     /// </summary>
-    private static readonly DateOnly FallbackLatestDateWhenNoStockDayInfo = new(2021, 1, 4);
+    private static readonly DateOnly FallbackLatestDateWhenNoStockDayInfo = new(2024, 1, 2);
+
+    /// <summary>
+    /// 同時呼叫 FinMind TaiwanStockKBar 之上限（過高易觸發對方限流／連線耗盡）。
+    /// </summary>
+    private const int MinuteKFinMindConcurrency = 16;
+
+    /// <summary>
+    /// 每批寫入 <see cref="分K資料表"/> 之列數，以避免單次 SaveChangesAsync 附加過多追蹤實體。
+    /// </summary>
+    private const int MinuteKEfInsertBatchSize = 2500;
 
     private readonly FinmindApiClient _finmindApiClient;
     private readonly NewStockContext _db;
@@ -413,6 +424,120 @@ public class UpdateService
             SkippedNotInStockInfo: skippedNotInStockInfo,
             Message: message);
     }
+
+    /// <summary>
+    /// FinMind <c>TaiwanStockKBar</c>：置換 <paramref name="date"/> 當日之全部 <see cref="分K資料表"/>（先刪後插）。
+    /// 代號清單取自 <see cref="StockInfo"/>；每檔以非同步工作呼叫 FinMind，並以 <see cref="MinuteKFinMindConcurrency"/> 限制並行，最後 <c>Task.WhenAll</c> 匯總後以 <see cref="MinuteKEfInsertBatchSize"/> 分批寫入。
+    /// </summary>
+    /// <remarks>
+    /// 單次 SaveChangesAsync 若附加數萬筆變更，變更追蹤成本與產生的 SQL／逾時風險皆可能過高；故採分批儲存並於每批後呼叫 <c>DbContext.ChangeTracker.Clear()</c>。
+    /// 若某檔 API 例外，會記錄警告並計入 <see cref="UpdateAllStocksMinuteKResult.ApiFailedStocks"/>，其餘檔照常寫入。
+    /// HTTP 介面：<see cref="Controllers.UpdateController.UpdateTaiwanStockKBar"/> 在 <c>ApiFailedStocks &gt; 0</c> 時回傳 400。
+    /// </remarks>
+    public async Task<UpdateAllStocksMinuteKResult> UpdateTaiwanStockKBarAsync(DateOnly date)
+    {
+        var cancellationToken = _httpContextAccessor.HttpContext?.RequestAborted ?? CancellationToken.None;
+
+        if (date == default)
+            throw new HttpStatusCodeException(StatusCodes.Status400BadRequest, "請提供 date（yyyy-MM-dd），不可為 default。");
+
+        await _db.分K資料表s.Where(e => e.Date == date).ExecuteDeleteAsync(cancellationToken);
+
+        var stockIds = await _db.StockInfos.AsNoTracking().Select(s => s.StockId).ToListAsync(cancellationToken);
+
+        var semaphore = new SemaphoreSlim(MinuteKFinMindConcurrency);
+
+        async Task<MinuteKFetchOutcome> FetchAndMapAsync(short stockId)
+        {
+            await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                var rows = await _finmindApiClient.GetTaiwanStockKBarAsync(date, stockId, cancellationToken).ConfigureAwait(false);
+                var entities = new List<分K資料表>(rows.Count);
+                foreach (var dto in rows)
+                {
+                    entities.Add(new 分K資料表
+                    {
+                        StockId = stockId,
+                        Date = dto.Date,
+                        分鐘 = TimeOnly.Parse(dto.Minute!, CultureInfo.InvariantCulture),
+                        開盤價 = dto.Open,
+                        最高價 = dto.High,
+                        最低價 = dto.Low,
+                        收盤價 = dto.Close,
+                        成交量 = dto.Volume,
+                        DataType = StockDayInfoDataTypeEnum.盤後,
+                    });
+                }
+
+                _logger.LogInformation(
+                    "FinMind TaiwanStockKBar 單檔完成：StockId={StockId}, Date={Date:yyyy-MM-dd}, Rows={RowCount}",
+                    stockId,
+                    date,
+                    entities.Count);
+
+                return new MinuteKFetchOutcome(stockId, entities, ApiOk: true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "FinMind TaiwanStockKBar 失敗：StockId={StockId}, Date={Date:yyyy-MM-dd}",
+                    stockId,
+                    date);
+                return new MinuteKFetchOutcome(stockId, [], ApiOk: false);
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+        }
+
+        var outcomes = await Task.WhenAll(stockIds.Select(id => FetchAndMapAsync(id))).ConfigureAwait(false);
+
+        var apiSucceededStocks = outcomes.Count(o => o.ApiOk);
+        var apiFailedStocks = outcomes.Length - apiSucceededStocks;
+        // 各檔一支 List；SelectMany 僅展開為序列（不先 ToList 複製成單一大 List），再以 Chunk 分批寫入。
+        var apiRowCountSum = outcomes.Sum(o => o.Entities.Count);
+
+        var inserted = 0;
+        foreach (var chunk in outcomes.SelectMany(o => o.Entities).Chunk(MinuteKEfInsertBatchSize))
+        {
+            await _db.分K資料表s.AddRangeAsync(chunk, cancellationToken).ConfigureAwait(false);
+            inserted += chunk.Length;
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            _db.ChangeTracker.Clear();
+        }
+
+        string? message = null;
+        if (apiFailedStocks > 0)
+        {
+            message = $"API 失敗檔數：{apiFailedStocks}。";
+            var failedIds = outcomes.Where(o => !o.ApiOk).Select(o => o.StockId).OrderBy(id => id).ToList();
+            if (failedIds.Count > 0 && failedIds.Count <= 40)
+                message += $" 失敗代號：" + string.Join(",", failedIds);
+            else if (failedIds.Count > 40)
+                message += $" 失敗代號（前40）：" + string.Join(",", failedIds.Take(40));
+        }
+
+        _logger.LogInformation(
+            $"FinMind TaiwanStockKBar：Date={date:yyyy-MM-dd}, StockTotal={stockIds.Count}, Ok={apiSucceededStocks}, Fail={apiFailedStocks}, ApiRowsSum={apiRowCountSum}, Inserted={inserted}");
+
+        return new UpdateAllStocksMinuteKResult(
+            Date: date,
+            StockTotal: stockIds.Count,
+            ApiSucceededStocks: apiSucceededStocks,
+            ApiFailedStocks: apiFailedStocks,
+            ApiRowCountSum: apiRowCountSum,
+            Inserted: inserted,
+            Updated: 0,
+            Message: message);
+    }
+
+    private sealed record MinuteKFetchOutcome(
+        short StockId,
+        List<分K資料表> Entities,
+        bool ApiOk);
 }
 
 public sealed record UpdateStockInfoResult(
@@ -450,4 +575,15 @@ public sealed record UpdateStockPeriodKResult(
     int Inserted,
     int Updated,
     int SkippedNotInStockInfo,
+    string? Message);
+
+/// <summary><see cref="UpdateService.UpdateTaiwanStockKBarAsync"/> 之摘要（全 StockInfo）。</summary>
+public sealed record UpdateAllStocksMinuteKResult(
+    DateOnly Date,
+    int StockTotal,
+    int ApiSucceededStocks,
+    int ApiFailedStocks,
+    int ApiRowCountSum,
+    int Inserted,
+    int Updated,
     string? Message);

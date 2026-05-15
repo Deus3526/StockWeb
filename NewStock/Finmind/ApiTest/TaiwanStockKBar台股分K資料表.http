@@ -1,5 +1,5 @@
 @date = 2026-03-09
-@stockId=2603
+@stockId=9999
 
 # 一次只允許查一天的一支股票
 GET {{$dotenv Domain}}/data?dataset=TaiwanStockKBar&start_date={{date}}&data_id={{stockId}}

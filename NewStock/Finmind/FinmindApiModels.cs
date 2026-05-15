@@ -144,6 +144,35 @@ public sealed class TaiwanStockWeekMonthPriceResponse : BaseStockResponse
 }
 
 /// <summary>
+/// FinMind TaiwanStockKBar（分 K）單列；一日、一檔查詢。
+/// </summary>
+public sealed class TaiwanStockKBarResponse : BaseStockResponse
+{
+    [JsonPropertyName("date")]
+    [JsonConverter(typeof(SaveDateOnlyJsonConverter))]
+    public DateOnly Date { get; set; }
+
+    /// <summary>如 <c>09:00:00</c>。</summary>
+    [JsonPropertyName("minute")]
+    public string? Minute { get; set; }
+
+    [JsonPropertyName("open")]
+    public double Open { get; set; }
+
+    [JsonPropertyName("high")]
+    public double High { get; set; }
+
+    [JsonPropertyName("low")]
+    public double Low { get; set; }
+
+    [JsonPropertyName("close")]
+    public double Close { get; set; }
+
+    [JsonPropertyName("volume")]
+    public long Volume { get; set; }
+}
+
+/// <summary>
 /// FinMind TaiwanStockTradingDate（台股交易日）單列。
 /// </summary>
 public sealed class TaiwanStockTradingDateResponse

@@ -73,4 +73,18 @@ public class UpdateController : ControllerBase
         var result = await _updateService.UpdateTaiwanStockMonthKAsync(date);
         return Ok(result);
     }
+
+    /// <summary>
+    /// FinMind TaiwanStockKBar：<paramref name="date"/> 為交易日（yyyy-MM-dd）；自 StockInfo 逐檔非同步抓取並置換該日全部分 K。若有任一檔 FinMind API 失敗則回傳 400（內容仍為彙總結果）。
+    /// </summary>
+    [HttpPost]
+    [ProducesResponseType(typeof(UpdateAllStocksMinuteKResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(UpdateAllStocksMinuteKResult), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<UpdateAllStocksMinuteKResult>> UpdateTaiwanStockKBar([FromQuery] DateOnly date)
+    {
+        var result = await _updateService.UpdateTaiwanStockKBarAsync(date);
+        if (result.ApiFailedStocks > 0)
+            return BadRequest(result);
+        return Ok(result);
+    }
 }
