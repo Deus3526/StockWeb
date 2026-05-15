@@ -14,6 +14,8 @@ public class NewStockContext : DbContext
 
     public virtual DbSet<StockDayInfo> StockDayInfos { get; set; }
 
+    public virtual DbSet<TaiwanTradingDay> TaiwanTradingDays { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<StockInfo>(entity =>
@@ -39,6 +41,12 @@ public class NewStockContext : DbContext
                 .WithMany(p => p.StockDayInfos)
                 .HasForeignKey(d => d.StockId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<TaiwanTradingDay>(entity =>
+        {
+            entity.HasKey(e => e.Date);
+            entity.Property(e => e.Date).ValueGeneratedNever();
         });
     }
 }
