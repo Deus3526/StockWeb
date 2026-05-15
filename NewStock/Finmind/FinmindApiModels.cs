@@ -1,5 +1,4 @@
 using NewStock.Models.Enum;
-using System.Globalization;
 using System.Text.Json.Serialization;
 
 namespace NewStock.Finmind;
@@ -19,11 +18,8 @@ public sealed class FinmindBaseResponse<T>
     public T? Data { get; set; }
 }
 
-public sealed class TaiwanStockInfoResponse
+public sealed class TaiwanStockInfoResponse : BaseStockResponse
 {
-    [JsonPropertyName("stock_id")]
-    public string? StockId { get; set; }
-
     [JsonPropertyName("stock_name")]
     public string? StockName { get; set; }
 
@@ -50,29 +46,16 @@ public sealed class TaiwanStockInfoResponse
             _ => MarketTypeEnum.Unknown,
         };
 
-    /// <summary>
-    /// stock_id 轉為 <see cref="short"/>（無法解析為 0）；使用 <see cref="CultureInfo.InvariantCulture"/>。
-    /// </summary>
-    [JsonIgnore]
-    public short StockIdShort =>
-        short.TryParse(StockId, NumberStyles.Integer, CultureInfo.InvariantCulture, out var id) ? id : (short)0;
 }
 
 /// <summary>
 /// FinMind TaiwanStockPrice（股價日成交）單列。
 /// </summary>
-public sealed class TaiwanStockPriceResponse
+public sealed class TaiwanStockPriceResponse : BaseStockResponse
 {
     [JsonPropertyName("date")]
     [JsonConverter(typeof(SaveDateOnlyJsonConverter))]
     public DateOnly Date { get; set; }
-
-    [JsonPropertyName("stock_id")]
-    public string? StockId { get; set; }
-
-    [JsonIgnore]
-    public short StockIdShort =>
-        short.TryParse(StockId, NumberStyles.Integer, CultureInfo.InvariantCulture, out var id) ? id : (short)0;
 
     [JsonPropertyName("Trading_Volume")]
     public long TradingVolume { get; set; }

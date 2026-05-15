@@ -26,7 +26,7 @@ public sealed class FinmindApiClient
     /// <summary>
     /// TaiwanStockInfo：過濾為上市／上櫃且 stock_id 長度為 4。
     /// <para>
-    /// 同一 <see cref="TaiwanStockInfoResponse.StockIdShort"/> 若多筆，只保留 <see cref="TaiwanStockInfoResponse.Date"/> 最大的一筆（無效／缺失日期於 JSON 反序列化為 <see cref="DateOnly.MinValue"/>）。
+    /// 同一 <see cref="BaseStockResponse.StockIdShort"/> 若多筆，只保留 <see cref="TaiwanStockInfoResponse.Date"/> 最大的一筆（無效／缺失日期於 JSON 反序列化為 <see cref="DateOnly.MinValue"/>）。
     /// </para>
     /// </summary>
     public async Task<IReadOnlyList<TaiwanStockInfoResponse>> GetTaiwanStockInfoAsync(CancellationToken cancellationToken)
@@ -44,7 +44,7 @@ public sealed class FinmindApiClient
             throw new InvalidOperationException("無法解析 FinMind TaiwanStockInfo 回應或缺少 data。");
 
         return baseResponse.Data
-            .Where(x => x.MarketTypeEnum != MarketTypeEnum.Unknown && x.StockId?.Length == 4 && x.StockIdShort >= 1000 && x.StockIdShort <= 9999)
+            .Where(x => x.MarketTypeEnum != MarketTypeEnum.Unknown && x.IsEligibleStock())
             .GroupBy(r => r.StockIdShort)
             .Select(g => g.OrderByDescending(r => r.Date).First())
             .ToList();
@@ -54,7 +54,7 @@ public sealed class FinmindApiClient
     /// TaiwanStockPrice：不分 <c>data_id</c>（單一交易日）。
     /// <para>若 FinMind 帳號需 Token，請在設定 <see cref="FinmindConfig.Token"/>；否則可能無法取得成功回應。</para>
     /// <para>
-    /// 僅回傳：<see cref="TaiwanStockPriceResponse.Date"/> 有效且等於 <paramref name="tradingDay"/>、且 <see cref="TaiwanStockPriceResponse.StockIdShort"/> ≥ 1000 之列（與 <see cref="GetTaiwanStockInfoAsync"/> 之代號篩選對齊）。
+    /// 僅回傳：<see cref="TaiwanStockPriceResponse.Date"/> 有效且等於 <paramref name="tradingDay"/>、且 <see cref="BaseStockResponse.IsEligibleStock"/> 之列（與 <see cref="GetTaiwanStockInfoAsync"/> 之代號篩選對齊）。
     /// </para>
     /// </summary>
     public async Task<IReadOnlyList<TaiwanStockPriceResponse>> GetTaiwanStockPriceForTradingDayAsync(DateOnly tradingDay, CancellationToken cancellationToken)
@@ -81,7 +81,7 @@ public sealed class FinmindApiClient
             throw new InvalidOperationException("無法解析 FinMind TaiwanStockPrice 回應或缺少 data。");
 
         return baseResponse.Data
-            .Where(x => x.Date != DateOnly.MinValue && x.Date == tradingDay && x.StockId?.Length == 4 && x.StockIdShort >= 1000 && x.StockIdShort <= 9999)
+            .Where(x => x.Date != DateOnly.MinValue && x.Date == tradingDay && x.IsEligibleStock())
             .ToList();
     }
 
