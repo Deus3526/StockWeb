@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NewStock.EFModels;
 using NewStock.Exceptions;
+using NewStock.Extensions;
 using NewStock.Finmind;
 using NewStock.Models.Enum;
 using System.Globalization;
@@ -107,6 +108,8 @@ public class UpdateService
     /// FinMind <c>Trading_Volume</c> 為股數，<see cref="StockDayInfo.成交量"/> 存張數（除以 1000），欄位為 <see cref="long"/>；
     /// <see cref="StockDayInfo.成交筆數"/> 對應 FinMind <c>Trading_turnover</c>。
     /// 平盤價／漲幅見 <see cref="TaiwanStockPriceResponse.平盤價"/>／<see cref="TaiwanStockPriceResponse.漲幅"/> 與 <see cref="TaiwanStockPriceResponse.Spread"/>。
+    /// 完成日線寫入後，若 <see cref="DateOnlyExtensions.AreInDifferentCalendarWeeks"/> 對「最後盤後日」與本次 <c>tradingDay</c> 為真，則呼叫 <see cref="UpdateTaiwanStockWeekKAsync"/>（週一取自 <see cref="DateOnlyExtensions.GetMondayOfCalendarWeek"/>）；
+    /// 若 <see cref="DateOnlyExtensions.AreInDifferentCalendarMonths"/> 為真，則呼叫 <see cref="UpdateTaiwanStockMonthKAsync"/>（月初為 <see cref="DateOnlyExtensions.GetFirstDayOfCalendarMonth"/>）。
     /// </remarks>
     public async Task<UpdateStockDayInfoResult> UpdateStockDayInfoAsync()
     {
@@ -116,13 +119,11 @@ public class UpdateService
             .Where(x => x.DataType == StockDayInfoDataTypeEnum.即時)
             .ExecuteDeleteAsync(cancellationToken);
 
-        var latestDateNullable = await _db.StockDayInfos
+        var latestDateInStockDayInfo = await _db.StockDayInfos
             .Where(x => x.DataType == StockDayInfoDataTypeEnum.盤後)
             .OrderByDescending(x => x.Date)
             .Select(x => (DateOnly?)x.Date)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        var latestDateInStockDayInfo = latestDateNullable ?? FallbackLatestDateWhenNoStockDayInfo;
+            .FirstOrDefaultAsync(cancellationToken) ?? FallbackLatestDateWhenNoStockDayInfo;
 
         var tradingDay = await GetNextStockDayInfoTradingDayAsync(latestDateInStockDayInfo, cancellationToken);
 
@@ -163,6 +164,29 @@ public class UpdateService
 
         await _db.SaveChangesAsync(cancellationToken);
 
+        UpdateStockPeriodKResult? weekKResult = null;
+        UpdateStockPeriodKResult? monthKResult = null;
+
+        if (latestDateInStockDayInfo.AreInDifferentCalendarWeeks(tradingDay))
+        {
+            var weekStartMonday = tradingDay.GetMondayOfCalendarWeek();
+            _logger.LogInformation(
+                "StockDayInfo 連動：不同曆週，更新週 K… Last盤後={Last:yyyy-MM-dd}, TradingDay={Curr:yyyy-MM-dd}, WeekMonday={WeekMon:yyyy-MM-dd}",
+                latestDateInStockDayInfo,
+                tradingDay,
+                weekStartMonday);
+            weekKResult = await UpdateTaiwanStockWeekKAsync(weekStartMonday).ConfigureAwait(false);
+        }
+
+        if (latestDateInStockDayInfo.AreInDifferentCalendarMonths(tradingDay))
+        {
+            var monthFirst = tradingDay.GetFirstDayOfCalendarMonth();
+            _logger.LogInformation(
+                "StockDayInfo 連動：跨入新曆月，更新月 K… MonthFirst={MonthFirst:yyyy-MM-dd}",
+                monthFirst);
+            monthKResult = await UpdateTaiwanStockMonthKAsync(monthFirst).ConfigureAwait(false);
+        }
+
         string? message = null;
         if (skippedNotInStockInfo > 0)
         {
@@ -179,7 +203,9 @@ public class UpdateService
             ApiRowCount: rows.Count,
             Inserted: inserted,
             SkippedNotInStockInfo: skippedNotInStockInfo,
-            Message: message);
+            Message: message,
+            WeekK: weekKResult,
+            MonthK: monthKResult);
     }
 
     /// <summary>
@@ -551,13 +577,16 @@ public sealed record UpdateStockInfoResult(
 /// <summary>
 /// <see cref="UpdateService.UpdateStockDayInfoAsync"/> 之結果摘要；
 /// <see cref="SkippedNotInStockInfo"/> 為 StockInfo 無對應而略過之筆數，<see cref="Message"/> 為情境說明（無略過時為 null）。
+/// <see cref="WeekK"/>／<see cref="MonthK"/> 為本次連動之週／月 K 置換結果；未觸發時為 null。
 /// </summary>
 public sealed record UpdateStockDayInfoResult(
     DateOnly TradingDay,
     int ApiRowCount,
     int Inserted,
     int SkippedNotInStockInfo,
-    string? Message);
+    string? Message,
+    UpdateStockPeriodKResult? WeekK = null,
+    UpdateStockPeriodKResult? MonthK = null);
 
 public sealed record UpdateTaiwanTradingDaysResult(
     DateOnly DateFrom,
