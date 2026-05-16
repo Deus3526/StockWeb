@@ -27,7 +27,7 @@ public class UpdateController : ControllerBase
 
     /// <summary>
     /// 依 FinMind TaiwanStockPrice 更新 StockDayInfo：自動以目前「盤後」最新日推算下一個 TaiwanTradingDay，必要時先同步交易日曆。
-    /// 成功寫入日線後，若相對於先前最後一筆盤後日已跨入<strong>新曆週</strong>（比對兩日所屬之週一），則連動呼叫週 K 置換；若已跨入<strong>新曆月</strong>，則連動呼叫月 K 置換（當月 1 號）。週／月結果回傳於 <see cref="UpdateStockDayInfoResult.WeekK"/>／<see cref="UpdateStockDayInfoResult.MonthK"/>（未觸發為 null）。
+    /// 成功寫入日線後，若「先前最後一筆盤後日」與本輪交易日<strong>不同曆週</strong>則以該週曆週一連動週 K；<strong>不同曆月</strong>則以當月 1 日連動月 K（FinMind 週 K 之 <c>date</c> 可為休市之週一）。週／月結果回傳於 <see cref="UpdateStockDayInfoResult.WeekK"/>／<see cref="UpdateStockDayInfoResult.MonthK"/>（未觸發為 null）。
     /// </summary>
     [HttpPost]
     [ProducesResponseType(typeof(UpdateStockDayInfoResult), StatusCodes.Status200OK)]
@@ -72,6 +72,19 @@ public class UpdateController : ControllerBase
     public async Task<ActionResult<UpdateStockPeriodKResult>> UpdateTaiwanStockMonthK([FromQuery] DateOnly date)
     {
         var result = await _updateService.UpdateTaiwanStockMonthKAsync(date);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// 週／月 K 歷史補齊（<strong>單步</strong>）：僅處理一個交易日。未帶 <paramref name="lastTradingDay"/> 時取最早一筆符合區間之交易日；有帶時取<strong>嚴格晚於</strong>該日之下一筆。比對上一輪與本輪交易日之曆週／曆月，跨週或跨月時分別以曆週一、月初補週／月 K。回傳之 <see cref="BackfillPeriodKResult.TradingDayProcessed"/> 下次作為 <paramref name="lastTradingDay"/>。
+    /// </summary>
+    [HttpPost]
+    [ProducesResponseType(typeof(BackfillPeriodKResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<BackfillPeriodKResult>> BackfillPeriodKFromTradingDays(
+        [FromQuery] DateOnly? lastTradingDay = null)
+    {
+        var result = await _updateService.BackfillPeriodKFromTradingDaysAsync(lastTradingDay);
         return Ok(result);
     }
 

@@ -25,6 +25,12 @@ public class UpdateService
     /// </summary>
     private const int MinuteKEfInsertBatchSize = 2500;
 
+    /// <summary>
+    /// 週／月 K 歷史補齊僅涵蓋此日期<strong>之前</strong>之 <see cref="TaiwanTradingDay"/>；
+    /// 此日（含）起之資料由日線等整批流程處理，不由本 backfill 處理。
+    /// </summary>
+    private static readonly DateOnly ExclusiveUpperTradingDayForPeriodKBackfill = new(2024, 1, 2);
+
     private readonly FinmindApiClient _finmindApiClient;
     private readonly NewStockContext _db;
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -108,8 +114,7 @@ public class UpdateService
     /// FinMind <c>Trading_Volume</c> 為股數，<see cref="StockDayInfo.成交量"/> 存張數（除以 1000），欄位為 <see cref="long"/>；
     /// <see cref="StockDayInfo.成交筆數"/> 對應 FinMind <c>Trading_turnover</c>。
     /// 平盤價／漲幅見 <see cref="TaiwanStockPriceResponse.平盤價"/>／<see cref="TaiwanStockPriceResponse.漲幅"/> 與 <see cref="TaiwanStockPriceResponse.Spread"/>。
-    /// 完成日線寫入後，若 <see cref="DateOnlyExtensions.AreInDifferentCalendarWeeks"/> 對「最後盤後日」與本次 <c>tradingDay</c> 為真，則呼叫 <see cref="UpdateTaiwanStockWeekKAsync"/>（週一取自 <see cref="DateOnlyExtensions.GetMondayOfCalendarWeek"/>）；
-    /// 若 <see cref="DateOnlyExtensions.AreInDifferentCalendarMonths"/> 為真，則呼叫 <see cref="UpdateTaiwanStockMonthKAsync"/>（月初為 <see cref="DateOnlyExtensions.GetFirstDayOfCalendarMonth"/>）。
+    /// 完成日線寫入後，比對「先前最後一筆盤後日」（庫內最大盤後日；若尚無盤後列則見 <see cref="FallbackLatestDateWhenNoStockDayInfo"/>）與本次 <c>tradingDay</c>：若<strong>不同曆週</strong>則以 <see cref="DateOnlyExtensions.GetMondayOfCalendarWeek"/>（<c>tradingDay</c> 所屬曆週之週一，該日休市亦可）呼叫 <see cref="UpdateTaiwanStockWeekKAsync"/>；若<strong>不同曆月</strong>則以 <see cref="DateOnlyExtensions.GetFirstDayOfCalendarMonth"/>（<c>tradingDay</c> 所屬曆月 1 日）呼叫 <see cref="UpdateTaiwanStockMonthKAsync"/>。
     /// </remarks>
     public async Task<UpdateStockDayInfoResult> UpdateStockDayInfoAsync()
     {
@@ -169,21 +174,22 @@ public class UpdateService
 
         if (latestDateInStockDayInfo.AreInDifferentCalendarWeeks(tradingDay))
         {
-            var weekStartMonday = tradingDay.GetMondayOfCalendarWeek();
+            var weekMonday = tradingDay.GetMondayOfCalendarWeek();
             _logger.LogInformation(
-                "StockDayInfo 連動：不同曆週，更新週 K… Last盤後={Last:yyyy-MM-dd}, TradingDay={Curr:yyyy-MM-dd}, WeekMonday={WeekMon:yyyy-MM-dd}",
+                "StockDayInfo 連動：盤後日與本輪交易日不同曆週，更新週 K… Last盤後={Last:yyyy-MM-dd}, TradingDay={Curr:yyyy-MM-dd}, WeekMonday={WeekMon:yyyy-MM-dd}",
                 latestDateInStockDayInfo,
                 tradingDay,
-                weekStartMonday);
-            weekKResult = await UpdateTaiwanStockWeekKAsync(weekStartMonday).ConfigureAwait(false);
+                weekMonday);
+            weekKResult = await UpdateTaiwanStockWeekKAsync(weekMonday).ConfigureAwait(false);
         }
 
         if (latestDateInStockDayInfo.AreInDifferentCalendarMonths(tradingDay))
         {
             var monthFirst = tradingDay.GetFirstDayOfCalendarMonth();
             _logger.LogInformation(
-                "StockDayInfo 連動：跨入新曆月，更新月 K… MonthFirst={MonthFirst:yyyy-MM-dd}",
-                monthFirst);
+                "StockDayInfo 連動：盤後日與本輪交易日不同曆月，更新月 K… MonthFirst={MonthFirst:yyyy-MM-dd}, TradingDay={Curr:yyyy-MM-dd}",
+                monthFirst,
+                tradingDay);
             monthKResult = await UpdateTaiwanStockMonthKAsync(monthFirst).ConfigureAwait(false);
         }
 
@@ -454,6 +460,90 @@ public class UpdateService
     }
 
     /// <summary>
+    /// 單次僅處理<strong>一個</strong>交易日：<see cref="NewStock.EFModels.TaiwanTradingDay"/> 篩選 <c>Date &lt; 2024-01-02</c>；
+    /// <paramref name="lastTradingDay"/> 為 null 時取區間內<strong>最早</strong>交易日，否則取<strong>嚴格晚於</strong>該日之下一個交易日。
+    /// 比對上一輪 <paramref name="lastTradingDay"/> 與本輪「下一個」交易日：若<strong>不同曆週</strong>則以該日所屬曆週一（休市亦可）補週 K；若<strong>不同曆月</strong>則以該月 1 日補月 K。首次呼叫 <paramref name="lastTradingDay"/> 為 null 時兩者皆補。回傳之 <see cref="BackfillPeriodKResult.TradingDayProcessed"/> 供下次帶入 <paramref name="lastTradingDay"/>。
+    /// </summary>
+    public async Task<BackfillPeriodKResult> BackfillPeriodKFromTradingDaysAsync(DateOnly? lastTradingDay)
+    {
+        var cancellationToken = _httpContextAccessor.HttpContext?.RequestAborted ?? CancellationToken.None;
+        var upper = ExclusiveUpperTradingDayForPeriodKBackfill;
+
+        var inRange = _db.TaiwanTradingDays.AsNoTracking().Where(t => t.Date < upper);
+
+        var current = lastTradingDay is null
+            ? await inRange.OrderBy(t => t.Date).Select(t => (DateOnly?)t.Date).FirstOrDefaultAsync(cancellationToken)
+                .ConfigureAwait(false)
+            : await inRange.Where(t => t.Date > lastTradingDay.Value).OrderBy(t => t.Date).Select(t => (DateOnly?)t.Date)
+                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+        if (current is null)
+        {
+            var msg = lastTradingDay is null
+                ? "在可補齊區間內沒有任何 TaiwanTradingDay。"
+                : "已無更晚的交易日（上一輪交易日之後無資料，或已超出區間）。";
+
+            _logger.LogInformation("BackfillPeriodK 單步：無本輪交易日。{Msg}", msg);
+
+            return new BackfillPeriodKResult(
+                TradingDayProcessed: null,
+                TradingDayExclusiveUpper: upper,
+                HasMoreAfterThisDay: false,
+                WeekKUpdated: false,
+                MonthKUpdated: false,
+                Message: msg);
+        }
+
+        var day = current.Value;
+
+        var needWeek = lastTradingDay is null
+            || lastTradingDay.Value.AreInDifferentCalendarWeeks(day);
+        var needMonth = lastTradingDay is null
+            || lastTradingDay.Value.AreInDifferentCalendarMonths(day);
+
+        var weekKUpdated = false;
+        if (needWeek)
+        {
+            var weekMonday = day.GetMondayOfCalendarWeek();
+            _logger.LogInformation(
+                "BackfillPeriodK 單步：上一輪與本輪不同曆週，補週 K WeekMonday={Wm:yyyy-MM-dd}, TradingDay={Td:yyyy-MM-dd}",
+                weekMonday,
+                day);
+            await UpdateTaiwanStockWeekKAsync(weekMonday).ConfigureAwait(false);
+            _db.ChangeTracker.Clear();
+            weekKUpdated = true;
+        }
+
+        var monthKUpdated = false;
+        if (needMonth)
+        {
+            var monthFirst = day.GetFirstDayOfCalendarMonth();
+            _logger.LogInformation(
+                "BackfillPeriodK 單步：上一輪與本輪不同曆月，補月 K MonthFirst={Mf:yyyy-MM-dd}, TradingDay={Td:yyyy-MM-dd}",
+                monthFirst,
+                day);
+            await UpdateTaiwanStockMonthKAsync(monthFirst).ConfigureAwait(false);
+            _db.ChangeTracker.Clear();
+            monthKUpdated = true;
+        }
+
+        var hasMore = await inRange.AnyAsync(t => t.Date > day, cancellationToken).ConfigureAwait(false);
+
+        _logger.LogInformation(
+            "BackfillPeriodK 單步完成：TradingDay={Td:yyyy-MM-dd}，尚有待處理較晚交易日={More}",
+            day,
+            hasMore);
+
+        return new BackfillPeriodKResult(
+            TradingDayProcessed: day,
+            TradingDayExclusiveUpper: upper,
+            HasMoreAfterThisDay: hasMore,
+            WeekKUpdated: weekKUpdated,
+            MonthKUpdated: monthKUpdated,
+            Message: null);
+    }
+
+    /// <summary>
     /// FinMind <c>TaiwanStockKBar</c>：置換 <paramref name="date"/> 當日之全部 <see cref="分K資料表"/>（先刪後插）。
     /// 代號清單取自 <see cref="StockInfo"/>；每檔以非同步工作呼叫 FinMind，並以 <see cref="MinuteKFinMindConcurrency"/> 限制並行，最後 <c>Task.WhenAll</c> 匯總後以 <see cref="MinuteKEfInsertBatchSize"/> 分批寫入。
     /// </summary>
@@ -606,6 +696,19 @@ public sealed record UpdateStockPeriodKResult(
     int Inserted,
     int Updated,
     int SkippedNotInStockInfo,
+    string? Message);
+
+/// <summary>
+/// <see cref="UpdateService.BackfillPeriodKFromTradingDaysAsync"/> 單步結果。
+/// <see cref="TradingDayProcessed"/> 為本輪處理之交易日；下次請帶入查詢 <c>lastTradingDay</c> 以續跑。
+/// <see cref="TradingDayExclusiveUpper"/> 為內建上界（<c>TaiwanTradingDay.Date &lt; 該日</c> 才納入）。
+/// </summary>
+public sealed record BackfillPeriodKResult(
+    DateOnly? TradingDayProcessed,
+    DateOnly TradingDayExclusiveUpper,
+    bool HasMoreAfterThisDay,
+    bool WeekKUpdated,
+    bool MonthKUpdated,
     string? Message);
 
 /// <summary><see cref="UpdateService.UpdateTaiwanStockKBarAsync"/> 之摘要（全 StockInfo）。</summary>
