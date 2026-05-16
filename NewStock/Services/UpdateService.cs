@@ -115,6 +115,7 @@ public class UpdateService
     /// <see cref="StockDayInfo.成交筆數"/> 對應 FinMind <c>Trading_turnover</c>。
     /// 平盤價／漲幅見 <see cref="TaiwanStockPriceResponse.平盤價"/>／<see cref="TaiwanStockPriceResponse.漲幅"/> 與 <see cref="TaiwanStockPriceResponse.Spread"/>。
     /// 完成日線寫入後，比對「先前最後一筆盤後日」（庫內最大盤後日；若尚無盤後列則見 <see cref="FallbackLatestDateWhenNoStockDayInfo"/>）與本次 <c>tradingDay</c>：若<strong>不同曆週</strong>則以 <see cref="DateOnlyExtensions.GetMondayOfCalendarWeek"/>（<c>tradingDay</c> 所屬曆週之週一，該日休市亦可）呼叫 <see cref="UpdateTaiwanStockWeekKAsync"/>；若<strong>不同曆月</strong>則以 <see cref="DateOnlyExtensions.GetFirstDayOfCalendarMonth"/>（<c>tradingDay</c> 所屬曆月 1 日）呼叫 <see cref="UpdateTaiwanStockMonthKAsync"/>。
+    /// （另可於此串接 <see cref="UpdateTaiwanStockKBarAsync"/> 置換當日分 K；為避免 FinMind API 過於頻繁，目前程式已註解關閉，需要時可自行還原。）
     /// </remarks>
     public async Task<UpdateStockDayInfoResult> UpdateStockDayInfoAsync()
     {
@@ -193,6 +194,17 @@ public class UpdateService
             monthKResult = await UpdateTaiwanStockMonthKAsync(monthFirst).ConfigureAwait(false);
         }
 
+        // 分 K：易觸發 FinMind 限流，暫時關閉；請改呼叫 api/Update/UpdateTaiwanStockKBar。
+        /*
+        var minuteKResult = await UpdateTaiwanStockKBarAsync(tradingDay).ConfigureAwait(false);
+        if (minuteKResult.ApiFailedStocks > 0)
+        {
+            throw new HttpStatusCodeException(
+                StatusCodes.Status400BadRequest,
+                minuteKResult.Message ?? $"分 K FinMind API 有 {minuteKResult.ApiFailedStocks} 檔失敗（TradingDay={tradingDay:yyyy-MM-dd}）。");
+        }
+        */
+
         string? message = null;
         if (skippedNotInStockInfo > 0)
         {
@@ -211,7 +223,8 @@ public class UpdateService
             SkippedNotInStockInfo: skippedNotInStockInfo,
             Message: message,
             WeekK: weekKResult,
-            MonthK: monthKResult);
+            MonthK: monthKResult,
+            MinuteK: null); // 分 K 已註解，見上；還原串接後改回 minuteKResult
     }
 
     /// <summary>
@@ -668,6 +681,7 @@ public sealed record UpdateStockInfoResult(
 /// <see cref="UpdateService.UpdateStockDayInfoAsync"/> 之結果摘要；
 /// <see cref="SkippedNotInStockInfo"/> 為 StockInfo 無對應而略過之筆數，<see cref="Message"/> 為情境說明（無略過時為 null）。
 /// <see cref="WeekK"/>／<see cref="MonthK"/> 為本次連動之週／月 K 置換結果；未觸發時為 null。
+/// <see cref="MinuteK"/> 若有串接當日分 K 更新則填入；目前已暫停內建分 K，預設為 null。
 /// </summary>
 public sealed record UpdateStockDayInfoResult(
     DateOnly TradingDay,
@@ -676,7 +690,8 @@ public sealed record UpdateStockDayInfoResult(
     int SkippedNotInStockInfo,
     string? Message,
     UpdateStockPeriodKResult? WeekK = null,
-    UpdateStockPeriodKResult? MonthK = null);
+    UpdateStockPeriodKResult? MonthK = null,
+    UpdateAllStocksMinuteKResult? MinuteK = null);
 
 public sealed record UpdateTaiwanTradingDaysResult(
     DateOnly DateFrom,

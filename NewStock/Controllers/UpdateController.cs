@@ -27,7 +27,8 @@ public class UpdateController : ControllerBase
 
     /// <summary>
     /// 依 FinMind TaiwanStockPrice 更新 StockDayInfo：自動以目前「盤後」最新日推算下一個 TaiwanTradingDay，必要時先同步交易日曆。
-    /// 成功寫入日線後，若「先前最後一筆盤後日」與本輪交易日<strong>不同曆週</strong>則以該週曆週一連動週 K；<strong>不同曆月</strong>則以當月 1 日連動月 K（FinMind 週 K 之 <c>date</c> 可為休市之週一）。週／月結果回傳於 <see cref="UpdateStockDayInfoResult.WeekK"/>／<see cref="UpdateStockDayInfoResult.MonthK"/>（未觸發為 null）。
+    /// 成功寫入日線後，若「先前最後一筆盤後日」與本輪交易日<strong>不同曆週</strong>則以該週曆週一連動週 K；<strong>不同曆月</strong>則以當月 1 日連動月 K（FinMind 週 K 之 <c>date</c> 可為休市之週一）。分 K 另行呼叫 <c>UpdateTaiwanStockKBar</c>（本 API 內已暫停串接以免限流）。
+    /// 若無下一交易日或周／月 K 參數錯誤，回應 <strong>400</strong>（訊息見 body）；成功時週／月結果於 <see cref="UpdateStockDayInfoResult.WeekK"/>／<see cref="UpdateStockDayInfoResult.MonthK"/>（未觸發為 null），<see cref="UpdateStockDayInfoResult.MinuteK"/> 目前為 null。
     /// </summary>
     [HttpPost]
     [ProducesResponseType(typeof(UpdateStockDayInfoResult), StatusCodes.Status200OK)]

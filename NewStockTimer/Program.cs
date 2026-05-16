@@ -1,88 +1,84 @@
+using System.Net;
 using System.Text;
 using System.Text.Json;
-using Timer = System.Timers.Timer;
 
 namespace NewStockTimer;
 
 /// <summary>
-/// 定時呼叫 NewStock：
-/// <list type="number">
-/// <item><description><c>POST api/Update/UpdateStockDayInfo</c>：寫入下一個交易日之 <c>StockDayInfo</c>；若與上一筆盤後日跨曆週／曆月則連動週 K、月 K。</description></item>
-/// <item><description>成功後再以回傳之 <c>tradingDay</c> 呼叫 <c>POST api/Update/UpdateTaiwanStockKBar?date=…</c> 置換該日全部分 K（與日線同日）。</description></item>
-/// </list>
+/// 迴圈呼叫 NewStock <c>POST api/Update/UpdateStockDayInfo</c>（日線＋條件週／月 K；分 K 未串接於此 API）。
+/// 單次完成並成功後等待 1 分鐘再執行；若回應為 <strong>400</strong> 則停止，請處理後再手動啟動。
 /// </summary>
-internal class Program
+internal static class Program
 {
-    private const int PeriodMinute = 60;
+    private static readonly TimeSpan DelayAfterSuccess = TimeSpan.FromMinutes(1);
 
-    private const string StockDayInfoUrl = "http://localhost:5247/api/Update/UpdateStockDayInfo";
-
-    private static string TaiwanStockKBarUrl(DateOnly tradingDay) =>
-        $"http://localhost:5247/api/Update/UpdateTaiwanStockKBar?date={tradingDay:yyyy-MM-dd}";
-
-    private static readonly JsonSerializerOptions s_jsonOptions = new() { PropertyNameCaseInsensitive = true };
+    private const string UpdateStockDayInfoUrl = "http://localhost:5247/api/Update/UpdateStockDayInfo";
 
     public static async Task Main(string[] args)
     {
         using var client = new HttpClient();
-        var timer = new Timer(1000 * 60 * PeriodMinute);
-        Console.WriteLine("Press Enter to exit...");
-        await AsyncOperation(client).ConfigureAwait(false);
-        timer.Elapsed += async (_, _) => await AsyncOperation(client).ConfigureAwait(false);
-        timer.Start();
+        Console.WriteLine("週期：成功後等待 1 分鐘再跑下一輪；HTTP 400 時停止。Press Enter 結束…");
 
-        Console.ReadLine();
-        timer.Stop();
-    }
+        using var exitCts = new CancellationTokenSource();
+        _ = Task.Run(
+            () =>
+            {
+                Console.ReadLine();
+                exitCts.Cancel();
+            },
+            exitCts.Token);
 
-    private static async Task AsyncOperation(HttpClient client)
-    {
         try
         {
-            Console.WriteLine($"發出請求，目前時間 : {DateTime.Now}");
-            Console.WriteLine(StockDayInfoUrl);
-            using var dayInfoResponse = await PostJsonBodyAsync(client, StockDayInfoUrl, new { }).ConfigureAwait(false);
-            var dayBody = await dayInfoResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
-            Console.WriteLine(dayBody);
-
-            if (!dayInfoResponse.IsSuccessStatusCode)
+            while (!exitCts.Token.IsCancellationRequested)
             {
-                Console.WriteLine($"UpdateStockDayInfo 失敗 {(int)dayInfoResponse.StatusCode}，{PeriodMinute} 分鐘後再試。");
-                return;
+                Console.WriteLine();
+                Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] 呼叫 {UpdateStockDayInfoUrl}");
+
+                using var response = await PostJsonBodyAsync(client, UpdateStockDayInfoUrl, new { }, exitCts.Token)
+                    .ConfigureAwait(false);
+                var body = await response.Content.ReadAsStringAsync(exitCts.Token).ConfigureAwait(false);
+                Console.WriteLine(body);
+
+                if (response.StatusCode == HttpStatusCode.BadRequest)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("收到 HTTP 400，已停止排程（請處理伺服端／FinMind 後再啟動 Timer）。");
+                    break;
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine($"HTTP {(int)response.StatusCode}，已停止。");
+                    break;
+                }
+
+                Console.WriteLine($"{DelayAfterSuccess.TotalMinutes} 分鐘後執行下一輪…");
+                try
+                {
+                    await Task.Delay(DelayAfterSuccess, exitCts.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
             }
-
-            var dayResult = JsonSerializer.Deserialize<UpdateStockDayInfoResponse>(dayBody, s_jsonOptions);
-            if (dayResult is null)
-            {
-                Console.WriteLine("無法解析 UpdateStockDayInfo 回應，略過分 K。");
-                return;
-            }
-
-            var kUrl = TaiwanStockKBarUrl(dayResult.TradingDay);
-            Console.WriteLine($"接著更新分 K（同日 tradingDay）：{kUrl}");
-            using var kResponse = await PostJsonBodyAsync(client, kUrl, new { }).ConfigureAwait(false);
-            var kBody = await kResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
-            Console.WriteLine(kBody);
-
-            if (!kResponse.IsSuccessStatusCode)
-                Console.WriteLine($"UpdateTaiwanStockKBar 失敗 {(int)kResponse.StatusCode}（日線與週／月 K 可能已成功）；{PeriodMinute} 分鐘後再試。");
         }
-        catch (Exception ex)
+        catch (OperationCanceledException)
         {
-            Console.WriteLine($"發生錯誤，{PeriodMinute} 分鐘後再試一次");
-            Console.WriteLine(ex);
+            Console.WriteLine("結束。");
         }
     }
 
-    private static Task<HttpResponseMessage> PostJsonBodyAsync(HttpClient client, string url, object data)
+    private static Task<HttpResponseMessage> PostJsonBodyAsync(
+        HttpClient client,
+        string url,
+        object data,
+        CancellationToken cancellationToken)
     {
         var jsonContent = JsonSerializer.Serialize(data);
         var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-        return client.PostAsync(url, content);
-    }
-
-    private sealed class UpdateStockDayInfoResponse
-    {
-        public DateOnly TradingDay { get; set; }
+        return client.PostAsync(url, content, cancellationToken);
     }
 }
