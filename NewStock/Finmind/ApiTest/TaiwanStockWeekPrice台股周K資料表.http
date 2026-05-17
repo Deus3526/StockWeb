@@ -1,6 +1,6 @@
-@date1 = 2026-03-09
+@date1 = 2026-05-11
 # 參數要是星期一那個日期
-GET {{$dotenv Domain}}/data?dataset=TaiwanStockWeekPrice&start_date={{date1}}&stock_id=2330
+GET {{$dotenv Domain}}/data?dataset=TaiwanStockWeekPrice&start_date={{date1}}&data_id=2330
 Authorization: Bearer {{$processEnv Finmind__Token}}
 
 

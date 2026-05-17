@@ -37,6 +37,7 @@ namespace NewStock
             builder.Services.Configure<FinmindConfig>(builder.Configuration.GetSection(FinmindConfig.SectionName));
             builder.Services.AddHttpClient<FinmindApiClient>();
             builder.Services.AddScoped<UpdateService>();
+            builder.Services.AddScoped<StrategyService>();
 
             var app = builder.Build();
             var logger = app.Services.GetRequiredService<ILogger<Program>>();

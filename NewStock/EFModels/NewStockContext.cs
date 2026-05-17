@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NewStock.Models;
 using NewStock.Models.Enum;
 
 namespace NewStock.EFModels;
