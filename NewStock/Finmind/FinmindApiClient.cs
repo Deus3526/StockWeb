@@ -231,4 +231,48 @@ public sealed class FinmindApiClient
                 && x.StockIdShort == stockId)
             .ToList();
     }
+
+    /// <summary>
+    /// FinMind <c>taiwan_stock_tick_snapshot</c>（見 <c>Finmind/ApiTest/即時資料.http</c>）：全市場快照，不帶 <c>data_id</c>。
+    /// <para>
+    /// 須 Bearer。篩選 <see cref="BaseStockResponse.IsEligibleStock"/>、<see cref="TaiwanStockTickSnapshotResponse.SnapshotInstant"/>
+    /// 可解析且<strong>曆日為本機今日</strong>之列；同一 <c>stock_id</c> 再以時間戳取最晚一筆（非今日或無法 Parse 之列略過）。
+    /// </para>
+    /// </summary>
+    public async Task<TaiwanStockTickSnapshotApiResult> GetTaiwanStockTickSnapshotAsync(
+        CancellationToken cancellationToken)
+    {
+        var url = $"{_configFinmind.Domain}/taiwan_stock_tick_snapshot";
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Authorization =
+            new AuthenticationHeaderValue("Bearer", _configFinmind.Token);
+
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var baseResponse =
+            await response.Content.ReadFromJsonAsync<
+                FinmindBaseResponse<List<TaiwanStockTickSnapshotResponse>>>(cancellationToken);
+
+        if (baseResponse?.Data is null)
+            throw new InvalidOperationException("無法解析 FinMind taiwan_stock_tick_snapshot 回應或缺少 data。");
+
+        var raw = baseResponse.Data;
+        var rawCount = raw.Count;
+        var todayCalendar = DateOnly.FromDateTime(DateTime.Today);
+
+        var rowsQuery =
+            raw
+                .Where(x =>
+                    x.IsEligibleStock()
+                    && x.SnapshotInstant is { } t
+                    && DateOnly.FromDateTime(t) == todayCalendar)
+                .GroupBy(x => x.StockIdShort)
+                .Select(g => g.OrderByDescending(x => x.SnapshotInstant!.Value).First());
+
+        var rows = rowsQuery.ToList();
+
+        return new TaiwanStockTickSnapshotApiResult(rawCount, rows);
+    }
 }

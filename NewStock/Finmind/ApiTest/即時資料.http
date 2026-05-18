@@ -1,0 +1,59 @@
+@stockId=2330
+
+# GET {{$dotenv Domain}}/taiwan_stock_tick_snapshot?data_id={{stockId}}
+GET {{$dotenv Domain}}/taiwan_stock_tick_snapshot
+Authorization: Bearer {{$processEnv Finmind__Token}}
+
+
+# {
+#   "msg": "success",
+#   "status": 200,
+#   "data": [
+#     {
+#       "open": 3.45,
+#       "high": 3.45,
+#       "low": 3.45,
+#       "close": 3.45,
+#       "change_price": 0.01,
+#       "change_rate": 0.29,
+#       "average_price": 3.45,
+#       "volume": 1,
+#       "total_volume": 11,
+#       "amount": 3450,
+#       "total_amount": 37950,
+#       "yesterday_volume": 120,
+#       "buy_price": 3.4,
+#       "buy_volume": 10,
+#       "sell_price": 3.49,
+#       "sell_volume": 1,
+#       "volume_ratio": 0.09,
+#       "date": "2026-05-18 09:13:01.247135",
+#       "stock_id": "5701",
+#       "TickType": 1 # 0: 無法判斷, 1: 賣盤成交, 2: 買盤成交
+#     }
+#   ]
+# }
+
+
+# {
+#     amount: int32, # 交易金額
+#     average_price: float64, # 平均成交價
+#     buy_price: float64, # 買入價
+#     buy_volume: int64, # 買入量
+#     change_price: str, # 漲跌
+#     change_rate: float64, # 漲跌百分比
+#     close: float64, # 最新成交價
+#     high: float64, # 最高價
+#     low: float64, # 最低價
+#     open: float64, # 開盤價
+#     sell_price: float64, # 賣出價
+#     sell_volume: int64, # 賣出量
+#     total_amount: int32, # 累積交易金額
+#     total_volume: int64, # 累積成交量
+#     volume: int64, # 成交量
+#     volume_ratio: float64, # 昨日與今日成交量比
+#     yesterday_volume: int64, # 昨日成交量
+#     date: str, # 成交時間
+#     stock_id: str, # 股票代碼
+#     TickType: str # 成交種類 (0: 無法判斷, 1: 賣盤成交, 2: 買盤成交)
+# }

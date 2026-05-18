@@ -665,6 +665,111 @@ public class UpdateService
             Message: message);
     }
 
+    /// <summary>
+    /// FinMind <c>taiwan_stock_tick_snapshot</c>（見 <c>Finmind/ApiTest/即時資料.http</c>）：將盤中即時快照寫入 <see cref="StockDayInfo"/>，<see cref="StockDayInfo.DataType"/><c>=即時</c>。
+    /// 主鍵為 <see cref="StockDayInfo.StockId"/>＋<see cref="StockDayInfo.Date"/>；於寫入前<strong>整庫刪除所有</strong>既存 <see cref="StockDayInfo.DataType"/><c>=即時</c> 之列，再對 API 結果逐檔<strong>插入</strong>新的一筆；
+    /// 若 <c>today</c> 該檔<strong>既有盤後</strong>結算（同主鍵僅能有盤後）則略過。
+    /// <see cref="TaiwanStockTickSnapshotResponse.TotalVolume"/>（<c>total_volume</c>）視為張，寫入 <see cref="StockDayInfo"/> 之<strong>張</strong>不重算。
+    /// 每檔僅一字之快照列來自 <see cref="FinmindApiClient.GetTaiwanStockTickSnapshotAsync"/>（依代號聚合後取時間最晚）。
+    /// </summary>
+    public async Task<UpdateTaiwanStockTickSnapshotResult> UpdateTaiwanStockTickSnapshotAsync()
+    {
+        var cancellationToken = _httpContextAccessor.HttpContext?.RequestAborted ?? CancellationToken.None;
+
+        var snapshot = await _finmindApiClient.GetTaiwanStockTickSnapshotAsync(cancellationToken).ConfigureAwait(false);
+
+        var allowedStockIds =
+            await _db.StockInfos.AsNoTracking().Select(s => s.StockId).ToHashSetAsync(cancellationToken).ConfigureAwait(false);
+
+        var snapshotRows = snapshot.Rows;
+        var today = DateOnly.FromDateTime(DateTime.Today);
+
+        await _db.StockDayInfos
+            .Where(e => e.DataType == StockDayInfoDataTypeEnum.即時)
+            .ExecuteDeleteAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var finalizedTodayStockIds =
+            await _db.StockDayInfos.AsNoTracking()
+                .Where(e => e.Date == today && e.DataType == StockDayInfoDataTypeEnum.盤後)
+                .Select(e => e.StockId)
+                .ToHashSetAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+        var inserted = 0;
+        var skippedNotInStockInfo = 0;
+        var skippedFinalizedPostMarket = 0;
+        var skippedStockIds = new HashSet<short>();
+
+        foreach (var dto in snapshotRows.OrderBy(x => x.StockIdShort))
+        {
+            if (!allowedStockIds.Contains(dto.StockIdShort))
+            {
+                skippedNotInStockInfo++;
+                skippedStockIds.Add(dto.StockIdShort);
+                continue;
+            }
+
+            if (finalizedTodayStockIds.Contains(dto.StockIdShort))
+            {
+                skippedFinalizedPostMarket++;
+                continue;
+            }
+
+            var newRow = new StockDayInfo
+            {
+                StockId = dto.StockIdShort,
+                Date = today,
+                DataType = StockDayInfoDataTypeEnum.即時,
+                開盤價 = dto.Open,
+                最高價 = dto.High,
+                最低價 = dto.Low,
+                收盤價 = dto.Close,
+                成交量 = dto.TotalVolume,
+                成交筆數 = 0,
+                漲幅 = dto.漲跌幅比率,
+                平盤價 = dto.平盤價,
+            };
+            _db.StockDayInfos.Add(newRow);
+            inserted++;
+        }
+
+        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        string? message = null;
+        var parts = new List<string>();
+        if (skippedNotInStockInfo > 0)
+        {
+            parts.Add($"略過 StockInfo 不存在 {skippedNotInStockInfo} 筆（{skippedStockIds.Count} 個代號）；可執行 UpdateStockInfo。");
+            if (skippedStockIds.Count <= 30)
+                parts.Add("代號：" + string.Join(",", skippedStockIds.Order()));
+        }
+
+        if (skippedFinalizedPostMarket > 0)
+            parts.Add($"已為盤後結算之列略過 {skippedFinalizedPostMarket} 檔（主鍵衝突，維護盤後優先）。");
+
+        if (parts.Count > 0)
+            message = string.Join(" ", parts);
+
+        _logger.LogInformation(
+            "FinMind taiwan_stock_tick_snapshot（全市場）：RawRows={Raw}, StocksDedup={Dedup}, Inserted={Ins}, SkippedNotInStockInfo={SkipInfo}, SkippedPostMarket={SkipPm}",
+            snapshot.ApiRawRowCount,
+            snapshotRows.Count,
+            inserted,
+            skippedNotInStockInfo,
+            skippedFinalizedPostMarket);
+
+        return new UpdateTaiwanStockTickSnapshotResult(
+            SessionDateRepresentative: today,
+            ApiRawRowCount: snapshot.ApiRawRowCount,
+            StocksAfterDedup: snapshotRows.Count,
+            Inserted: inserted,
+            Updated: 0,
+            SkippedNotInStockInfo: skippedNotInStockInfo,
+            SkippedFinalizedPostMarket: skippedFinalizedPostMarket,
+            Message: message);
+    }
+
     private sealed record MinuteKFetchOutcome(
         short StockId,
         List<分K資料表> Entities,
@@ -735,4 +840,15 @@ public sealed record UpdateAllStocksMinuteKResult(
     int ApiRowCountSum,
     int Inserted,
     int Updated,
+    string? Message);
+
+/// <summary><see cref="UpdateService.UpdateTaiwanStockTickSnapshotAsync"/>（FinMind <c>taiwan_stock_tick_snapshot</c>）之摘要。</summary>
+public sealed record UpdateTaiwanStockTickSnapshotResult(
+    DateOnly SessionDateRepresentative,
+    int ApiRawRowCount,
+    int StocksAfterDedup,
+    int Inserted,
+    int Updated,
+    int SkippedNotInStockInfo,
+    int SkippedFinalizedPostMarket,
     string? Message);

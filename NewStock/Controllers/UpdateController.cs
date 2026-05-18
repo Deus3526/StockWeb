@@ -102,4 +102,15 @@ public class UpdateController : ControllerBase
             return BadRequest(result);
         return Ok(result);
     }
+
+    /// <summary>
+    /// FinMind <c>taiwan_stock_tick_snapshot</c>（Bearer，見 <c>Finmind/ApiTest/即時資料.http</c>）：以<strong>全市場</strong>快照更新當日盤中即時列至 <see cref="EFModels.StockDayInfo"/>（<c>StockDayInfo.DataType</c>=即時）。
+    /// </summary>
+    [HttpPost]
+    [ProducesResponseType(typeof(UpdateTaiwanStockTickSnapshotResult), StatusCodes.Status200OK)]
+    public async Task<ActionResult<UpdateTaiwanStockTickSnapshotResult>> UpdateRealtimeStockQuotes()
+    {
+        var result = await _updateService.UpdateTaiwanStockTickSnapshotAsync();
+        return Ok(result);
+    }
 }
